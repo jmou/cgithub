@@ -30,7 +30,7 @@
           <% if (item.contentType === 'directory') { %>
             <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/tree/<%= it.branch %>/<%= item.path %>"><%= item.name %></a>
           <% } else { %>
-            <%= item.name %>
+            <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/blob/<%= it.branch %>/<%= item.path %>"><%= item.name %></a>
           <% } %>
         </td>
       </tr>

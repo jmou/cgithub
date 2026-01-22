@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { Eta } from "eta";
-import { getGitHubTree } from "./scraper.js";
+import { getGitHubTree, getGitHubBlob } from "./scraper.js";
 
 const app = new Hono();
 const eta = new Eta({ views: "./views" });
@@ -18,6 +18,27 @@ app.get("/:owner/:repo/tree/:branch/:path{.*}?", async (c) => {
 
     const data = await getGitHubTree(owner, repo, branch, path);
     const html = await eta.renderAsync("tree.eta", data);
+
+    return c.html(html);
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
+    return c.html(
+      `<html><body><h1>Error</h1><p>${errorMessage}</p></body></html>`,
+      500,
+    );
+  }
+});
+
+app.get("/:owner/:repo/blob/:branch/:path{.*}", async (c) => {
+  try {
+    const owner = c.req.param("owner");
+    const repo = c.req.param("repo");
+    const branch = c.req.param("branch");
+    const path = c.req.param("path");
+
+    const data = await getGitHubBlob(owner, repo, branch, path);
+    const html = await eta.renderAsync("blob.eta", data);
 
     return c.html(html);
   } catch (error) {

@@ -1,6 +1,16 @@
 body {
   margin: 0;
   padding: 1rem;
+  font-family: Helvetica, Arial, sans-serif;
+}
+
+pre.blob {
+  margin: 1rem 0;
+  padding: 1rem;
+  border: 1px solid #d0d7de;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-family: monospace;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -10,5 +20,9 @@ body {
   }
   a {
     color: #4493f8;
+  }
+  .blob {
+    border-color: #30363d;
+    background: #161b22;
   }
 }
