@@ -1,0 +1,22 @@
+{
+  "name": "cgithub",
+  "version": "1.0.0",
+  "description": "Lightweight GitHub alternative frontend",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently 'tsc --watch --preserveWatchOutput' 'node --watch --watch-preserve-output build/index.js'",
+    "build": "tsc",
+    "start": "node build/index.js"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.13.7",
+    "eta": "^3.5.0",
+    "hono": "^4.6.14"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "concurrently": "^9.1.2",
+    "prettier": "^3.8.1",
+    "typescript": "^5.7.2"
+  }
+}
