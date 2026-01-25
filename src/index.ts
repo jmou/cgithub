@@ -1,4 +1,4 @@
-import { serve } from "@hono/node-server";
+import { createAdaptorServer, serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { Eta } from "eta";
 import { Hono } from "hono";
@@ -55,7 +55,15 @@ app.get("/:owner/:repo/blob/:branch/:path{.*}", async (c) => {
   }
 });
 
-const port = parseInt(process.env.PORT || "3000", 10);
-serve({ fetch: app.fetch, port }, (info) => {
-  console.log(`Server running on http://localhost:${info.port}`);
-});
+if (process.env.LISTEN_FDS === "1") {
+  const server = createAdaptorServer(app);
+  // Listen on SD_LISTEN_FDS_START.
+  server.listen({ fd: 3 }, () => {
+    console.log("Server running via systemd socket activation");
+  });
+} else {
+  const port = parseInt(process.env.PORT || "3000", 10);
+  serve({ fetch: app.fetch, port }, (info) => {
+    console.log(`Server running on http://localhost:${info.port}`);
+  });
+}
