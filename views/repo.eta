@@ -6,16 +6,16 @@
       <div class="description"><%= it.info.description %></div>
     <% } %>
     <% if (it.info.website) { %>
-      <div><a href="<%= it.info.website %>" rel="noopener noreferrer"><%= it.info.website %></a></div>
+      <div><img src="/static/icons/link.svg" alt="" class="icon"> <a href="<%= it.info.website %>" rel="noopener noreferrer"><%= it.info.website %></a></div>
     <% } %>
     <% if (it.info.stars) { %>
-      <span>★ <%= it.info.stars %></span>
+      <span><img src="/static/icons/star.svg" alt="stars" class="icon"> <%= it.info.stars %></span>
     <% } %>
     <% if (it.info.watchers) { %>
-      <span>👁 <%= it.info.watchers %></span>
+      <span><img src="/static/icons/eye.svg" alt="watchers" class="icon"> <%= it.info.watchers %></span>
     <% } %>
     <% if (it.info.forks) { %>
-      <span>🔀 <%= it.info.forks %></span>
+      <span><img src="/static/icons/git-fork.svg" alt="forks" class="icon"> <%= it.info.forks %></span>
     <% } %>
   </div>
 <% } %>

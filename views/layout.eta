@@ -8,7 +8,7 @@
 <body>
   <header>
     <h1><%= it.repo.owner %>/<%= it.repo.name %></h1>
-    <div>branch: <%= it.branch %></div>
+    <div><img src="/static/icons/git-branch.svg" alt="branch" class="icon"> <%= it.branch %></div>
     <% if (it.path) { %>
       <div>
         path: <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/tree/<%= it.branch %>">root</a><%

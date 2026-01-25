@@ -13,6 +13,10 @@ const eta = new Eta({ views: path.join(__dirname, "..", "views") });
 
 app.use("/static/*", serveStatic({ root: path.join(__dirname, "..") }));
 
+app.get("/", async (c) => {
+  return c.html(await eta.renderAsync("home.eta", {}));
+});
+
 app.get("/:owner/:repo", async (c) => {
   const { owner, repo } = c.req.param();
   const data = await getGitHubRepo(owner, repo);

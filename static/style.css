@@ -4,6 +4,11 @@ body {
   font-family: Helvetica, Arial, sans-serif;
 }
 
+.icon {
+  height: 1lh;
+  vertical-align: text-bottom;
+}
+
 pre.blob {
   margin: 1rem 0;
   padding: 1rem;
