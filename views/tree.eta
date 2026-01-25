@@ -1,16 +1,3 @@
 <% layout("./layout") %>
 
-<table>
-  <% for (const item of it.items) { %>
-    <tr>
-      <td>
-        <span class="icon"><%= item.contentType === 'directory' ? '📁' : '📄' %></span>
-        <% if (item.contentType === 'directory') { %>
-          <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/tree/<%= it.branch %>/<%= item.path %>"><%= item.name %></a>
-        <% } else { %>
-          <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/blob/<%= it.branch %>/<%= item.path %>"><%= item.name %></a>
-        <% } %>
-      </td>
-    </tr>
-  <% } %>
-</table>
+<%~ include("./_tree", it) %>

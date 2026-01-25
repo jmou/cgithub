@@ -37,6 +37,18 @@ export interface GitHubTree extends GitHubCommon {
   items: TreeItem[];
 }
 
+export interface RepoInfo {
+  description: string | null;
+  website: string | null;
+  stars: string | null;
+  watchers: string | null;
+  forks: string | null;
+}
+
+export interface GitHubRepo extends GitHubTree {
+  info: RepoInfo;
+}
+
 export interface GitHubBlob extends GitHubCommon {
   language: string | null;
   size: number;
@@ -84,6 +96,25 @@ function parsePayload(
   return null;
 }
 
+function parseRepoInfo(html: string): RepoInfo {
+  const descMatch = html.match(/<p[^>]*class="[^"]*f4[^"]*"[^>]*>([\s\S]*?)<\/p>/);
+  const description = descMatch?.[1]?.replace(/<[^>]+>/g, "").trim() || null;
+  const websiteMatch = html.match(
+    /<a[^>]*rel="noopener noreferrer nofollow"[^>]*href="([^"]+)"/,
+  );
+  const starsMatch = html.match(/id="repo-stars-counter-star"[^>]*>([^<]+)/);
+  const watchersMatch = html.match(/<strong>(\d+)<\/strong>\s*watching/);
+  const forksMatch = html.match(/id="repo-network-counter"[^>]*>([^<]+)/);
+
+  return {
+    description,
+    website: websiteMatch?.[1] || null,
+    stars: starsMatch?.[1]?.trim() || null,
+    watchers: watchersMatch?.[1] || null,
+    forks: forksMatch?.[1]?.trim() || null,
+  };
+}
+
 function extractGitHub<T>(payload: RawPayload, extra: T): GitHubCommon & T {
   return {
     repo: {
@@ -94,6 +125,26 @@ function extractGitHub<T>(payload: RawPayload, extra: T): GitHubCommon & T {
     path: payload.path,
     ...extra,
   };
+}
+
+export async function getGitHubRepo(
+  owner: string,
+  repo: string,
+): Promise<GitHubRepo> {
+  const html = await fetchGitHubPage(`${owner}/${repo}`);
+
+  const payload = parsePayload(html, "react-partial.embeddedData", [
+    "props",
+    "initialPayload",
+  ]);
+
+  if (payload?.tree === undefined) {
+    throw new Error("Could not find tree data in embedded JSON");
+  }
+
+  const info = parseRepoInfo(html);
+
+  return extractGitHub(payload, { items: payload.tree.items, info });
 }
 
 export async function getGitHubTree(

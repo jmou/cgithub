@@ -4,7 +4,7 @@ import { Eta } from "eta";
 import { Hono } from "hono";
 import * as path from "node:path";
 import * as url from "node:url";
-import { getGitHubBlob, getGitHubTree } from "./scraper.js";
+import { getGitHubBlob, getGitHubRepo, getGitHubTree } from "./scraper.js";
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 
@@ -12,6 +12,12 @@ const app = new Hono();
 const eta = new Eta({ views: path.join(__dirname, "..", "views") });
 
 app.use("/static/*", serveStatic({ root: path.join(__dirname, "..") }));
+
+app.get("/:owner/:repo", async (c) => {
+  const { owner, repo } = c.req.param();
+  const data = await getGitHubRepo(owner, repo);
+  return c.html(await eta.renderAsync("repo.eta", data));
+});
 
 app.get("/:owner/:repo/tree/:branch/:path{.*}?", async (c) => {
   const { owner, repo, branch, path = "" } = c.req.param();
