@@ -2,16 +2,16 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title><%= it.repo.owner %>/<%= it.repo.name %> - <%= it.path || 'root' %></title>
+  <title><%= it.repo.owner %>/<%= it.repo.name %> - <%= it.path || '/' %></title>
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
   <header>
-    <h1><%= it.repo.owner %>/<%= it.repo.name %></h1>
-    <div><img src="/static/icons/git-branch.svg" alt="branch" class="icon"> <%= it.branch %></div>
+    <div class="repo"><%= it.repo.owner %>/<%= it.repo.name %></div>
+    <div class="branch"><img src="/static/icons/git-branch.svg" alt="branch" class="icon"> <%= it.branch %></div>
     <% if (it.path) { %>
-      <div>
-        path: <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/tree/<%= it.branch %>">root</a><%
+      <span>
+        <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/tree/<%= it.branch %>">(top)</a><%
         const pathParts = it.path.split('/').filter(p => p);
         let currentPath = '';
         for (let i = 0; i < pathParts.length; i++) {
@@ -24,13 +24,7 @@
             %>/<a href="/<%= it.repo.owner %>/<%= it.repo.name %>/tree/<%= it.branch %>/<%= currentPath %>"><%= part %></a><%
           }
         } %>
-      </div>
-    <% } %>
-    <% if (it.language) { %>
-      <div>language: <%= it.language %></div>
-    <% } %>
-    <% if (it.size !== undefined) { %>
-      <div>size: <%= it.size %> bytes</div>
+      </span>
     <% } %>
   </header>
 

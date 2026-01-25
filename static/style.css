@@ -1,7 +1,37 @@
 body {
-  margin: 0;
-  padding: 1rem;
+  margin: 0 1rem;
   font-family: Helvetica, Arial, sans-serif;
+
+  --border-color: #d0d7de;
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    background: #0d1117;
+    color: #e6edf3;
+    --border-color: #30363d;
+  }
+  a {
+    color: #4493f8;
+  }
+  .blob {
+    background: #161b22;
+  }
+}
+
+a {
+  text-decoration: none;
+}
+
+header, .box {
+  margin: 1rem 0;
+  border: 1px solid var(--border-color);
+  padding: .5rem;
+}
+
+footer {
+  margin-top: 1rem;
+  text-align: center;
 }
 
 .icon {
@@ -9,25 +39,28 @@ body {
   vertical-align: text-bottom;
 }
 
-pre.blob {
-  margin: 1rem 0;
-  padding: 1rem;
-  border: 1px solid #d0d7de;
-  border-radius: 6px;
-  overflow-x: auto;
-  font-family: monospace;
+.repo {
+  margin-bottom: 1rem;
+  font-size: 120%;
+  font-weight: bold;
 }
 
-@media (prefers-color-scheme: dark) {
-  body {
-    background: #0d1117;
-    color: #e6edf3;
-  }
-  a {
-    color: #4493f8;
-  }
-  .blob {
-    border-color: #30363d;
-    background: #161b22;
-  }
+.branch {
+  display: inline-block;
+  margin-right: 1rem;
+  padding: .2rem;
+  border: 1px solid var(--border-color);
+}
+
+.description {
+  margin-bottom: .2rem;
+}
+
+.count + .count {
+  margin-left: 1rem;
+}
+
+pre.box {
+  /* Instead of scrolling overflow for long lines, grow the box. */
+  width: fit-content;
 }
