@@ -41,6 +41,12 @@ app.get("/:owner/:repo/raw/:branch/:path{.*}", async (c) => {
   return c.redirect(`https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${path}`);
 });
 
+app.all("*", async (c) => {
+  const path = c.req.path;
+  c.header("Referrer-Policy", "no-referrer");
+  return c.redirect(`https://github.com${path}`);
+});
+
 if (process.env.LISTEN_FDS === "1") {
   const server = createAdaptorServer(app);
   // Listen on SD_LISTEN_FDS_START.
