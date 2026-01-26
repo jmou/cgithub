@@ -35,6 +35,12 @@ app.get("/:owner/:repo/blob/:branch/:path{.*}", async (c) => {
   return c.html(await eta.renderAsync("blob.eta", data));
 });
 
+app.get("/:owner/:repo/raw/:branch/:path{.*}", async (c) => {
+  const { owner, repo, branch, path } = c.req.param();
+  c.header("Referrer-Policy", "no-referrer");
+  return c.redirect(`https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${path}`);
+});
+
 if (process.env.LISTEN_FDS === "1") {
   const server = createAdaptorServer(app);
   // Listen on SD_LISTEN_FDS_START.
