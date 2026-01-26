@@ -2,9 +2,9 @@ import { createAdaptorServer, serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { Eta } from "eta";
 import { Hono } from "hono";
-import * as path from "node:path";
-import * as url from "node:url";
-import { getGitHubBlob, getGitHubRepo, getGitHubTree } from "./scraper.js";
+import path from "node:path";
+import url from "node:url";
+import { getGitHubBlob, getGitHubRepo, getGitHubTree } from "./scraper.ts";
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 

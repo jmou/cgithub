@@ -4,7 +4,7 @@
   "description": "Lightweight GitHub alternative frontend",
   "type": "module",
   "scripts": {
-    "dev": "concurrently 'tsc --watch --preserveWatchOutput' 'node --watch --watch-preserve-output build/index.js'",
+    "dev": "node --watch --watch-preserve-output src/index.ts",
     "build": "rm -rf dist/* && esbuild --bundle --format=esm --platform=node --outdir=dist/build --sourcemap src/index.ts && cp -R static views dist/"
   },
   "dependencies": {
@@ -14,7 +14,6 @@
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
-    "concurrently": "^9.1.2",
     "esbuild": "^0.27.2",
     "prettier": "^3.8.1",
     "typescript": "^5.7.2"
