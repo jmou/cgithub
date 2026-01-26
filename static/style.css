@@ -31,6 +31,13 @@ body > header, .box {
   border: 1px solid var(--border-color);
   padding: var(--box-padding);
 
+  > *:first-child {
+    margin-top: 0;
+  }
+  > *:last-child {
+    margin-bottom: 0;
+  }
+
   > header:first-child {
     margin: calc(-1 * var(--box-padding));
     margin-bottom: 0;
