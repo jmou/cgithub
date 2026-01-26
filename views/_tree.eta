@@ -4,7 +4,7 @@
       <td>
         <% if (item.contentType === 'directory') { %>
           <img src="/static/icons/folder-simple.svg" alt="tree" class="icon">
-          <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/tree/<%= it.branch %>/<%= item.path %>"><%= item.name %></a>
+          <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/tree/<%= it.branch %>/<%= item.path %>"><%= item.name %>/</a>
         <% } else { %>
           <img src="/static/icons/file.svg" alt="blob" class="icon">
           <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/blob/<%= it.branch %>/<%= item.path %>"><%= item.name %></a>
