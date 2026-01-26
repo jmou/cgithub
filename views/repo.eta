@@ -17,6 +17,9 @@
     <% if (it.info.forks) { %>
       <span class="count"><img src="/static/icons/git-fork.svg" alt="forks" class="icon"> <%= it.info.forks %></span>
     <% } %>
+    <% if (it.info.numReleases) { %>
+      <div><a href="/<%= it.repo.owner %>/<%= it.repo.name %>/releases" rel="noreferrer"><%= it.info.numReleases %> releases</a></div>
+    <% } %>
   </div>
 <% } %>
 

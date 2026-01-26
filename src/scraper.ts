@@ -54,6 +54,7 @@ export interface RepoInfo {
   stars: string | null;
   watchers: string | null;
   forks: string | null;
+  numReleases?: number;
 }
 
 export interface GitHubRepo extends GitHubTree {
@@ -110,12 +111,21 @@ function parseRepoInfo(html: string): RepoInfo {
   const watchersMatch = html.match(/<strong>(\d+)<\/strong>\s*watching/);
   const forksMatch = html.match(/id="repo-network-counter"[^>]*>([^<]+)/);
 
+  let numReleases: number | undefined;
+  const releaseCountMatch = html.match(
+    /<a[^>]*href="[^"]*\/releases"[^>]*>[\s\S]*?<span[^>]*title="(\d+)"[^>]*(?:class="[^"]*Counter|data-view-component="true")[^>]*>/,
+  );
+  if (releaseCountMatch) {
+    numReleases = parseInt(releaseCountMatch[1], 10);
+  }
+
   return {
     description,
     website: websiteMatch?.[1] || null,
     stars: starsMatch?.[1]?.trim() || null,
     watchers: watchersMatch?.[1] || null,
     forks: forksMatch?.[1]?.trim() || null,
+    numReleases,
   };
 }
 
