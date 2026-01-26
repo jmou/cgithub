@@ -3,6 +3,7 @@ body {
   font-family: Helvetica, Arial, sans-serif;
 
   --border-color: #d0d7de;
+  --shade-background: #eeeeee;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -23,10 +24,20 @@ a {
   text-decoration: none;
 }
 
-header, .box {
+body > header, .box {
+  --box-padding: .5rem;
+
   margin: 1rem 0;
   border: 1px solid var(--border-color);
-  padding: .5rem;
+  padding: var(--box-padding);
+
+  > header:first-child {
+    margin: calc(-1 * var(--box-padding));
+    margin-bottom: 0;
+    padding: .5rem;
+    border-bottom: 1px solid var(--border-color);
+    font-weight: bold;
+  }
 }
 
 footer {
@@ -63,4 +74,32 @@ footer {
 pre.box {
   /* Instead of scrolling overflow for long lines, grow the box. */
   width: fit-content;
+}
+
+.overview {
+  overflow-wrap: break-word;
+  &.box {
+    --box-padding: 1rem;
+  }
+
+  a {
+    text-decoration: underline;
+  }
+
+  h1, h2 {
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  code {
+    background: var(--shade-background);
+  }
+
+  /* TODO Strip permalinks? */
+  svg.octicon-link {
+    display: none;
+  }
 }

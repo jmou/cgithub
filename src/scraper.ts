@@ -4,6 +4,13 @@ interface TreeItem {
   path: string;
 }
 
+interface OverviewFile {
+  displayName: string;
+  preferredFileType: string;
+  richText?: string;
+  loaded: boolean;
+}
+
 interface RawPayload {
   repo: {
     ownerLogin: string;
@@ -22,6 +29,9 @@ interface RawPayload {
     }[];
     size: number;
   };
+  overview?: {
+    overviewFiles?: OverviewFile[];
+  };
 }
 
 interface GitHubCommon {
@@ -35,6 +45,7 @@ interface GitHubCommon {
 
 export interface GitHubTree extends GitHubCommon {
   items: TreeItem[];
+  overviewHtml?: Record<string, string>;
 }
 
 export interface RepoInfo {
@@ -62,19 +73,14 @@ async function fetchGitHubPage(path: string): Promise<string> {
   const headers = {
     "User-Agent":
       "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-    Accept:
-      "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+    Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
     "Accept-Language": "en-US,en;q=0.5",
   };
   const response = await fetch(`https://github.com/${path}`, { headers });
   return response.text();
 }
 
-function parsePayload(
-  html: string,
-  dataTarget: string,
-  prop: string[],
-): RawPayload | null {
+function parsePayload(html: string, dataTarget: string, prop: string[]): RawPayload | null {
   const regex = new RegExp(
     `<script type="application/json" data-target="${dataTarget}">([^<]+)</script>`,
     "g",
@@ -99,9 +105,7 @@ function parsePayload(
 function parseRepoInfo(html: string): RepoInfo {
   const descMatch = html.match(/<p[^>]*class="[^"]*f4[^"]*"[^>]*>([\s\S]*?)<\/p>/);
   const description = descMatch?.[1]?.replace(/<[^>]+>/g, "").trim() || null;
-  const websiteMatch = html.match(
-    /<a[^>]*rel="noopener noreferrer nofollow"[^>]*href="([^"]+)"/,
-  );
+  const websiteMatch = html.match(/<a[^>]*rel="noopener noreferrer nofollow"[^>]*href="([^"]+)"/);
   const starsMatch = html.match(/id="repo-stars-counter-star"[^>]*>([^<]+)/);
   const watchersMatch = html.match(/<strong>(\d+)<\/strong>\s*watching/);
   const forksMatch = html.match(/id="repo-network-counter"[^>]*>([^<]+)/);
@@ -113,6 +117,16 @@ function parseRepoInfo(html: string): RepoInfo {
     watchers: watchersMatch?.[1] || null,
     forks: forksMatch?.[1]?.trim() || null,
   };
+}
+
+function extractOverviewHtml(payload: RawPayload): Record<string, string> | undefined {
+  const result: Record<string, string> = {};
+  for (const file of payload.overview?.overviewFiles ?? []) {
+    if (file.loaded && file.richText !== undefined) {
+      result[file.displayName] = file.richText;
+    }
+  }
+  return Object.keys(result).length > 0 ? result : undefined;
 }
 
 function extractGitHub<T>(payload: RawPayload, extra: T): GitHubCommon & T {
@@ -127,24 +141,19 @@ function extractGitHub<T>(payload: RawPayload, extra: T): GitHubCommon & T {
   };
 }
 
-export async function getGitHubRepo(
-  owner: string,
-  repo: string,
-): Promise<GitHubRepo> {
+export async function getGitHubRepo(owner: string, repo: string): Promise<GitHubRepo> {
   const html = await fetchGitHubPage(`${owner}/${repo}`);
 
-  const payload = parsePayload(html, "react-partial.embeddedData", [
-    "props",
-    "initialPayload",
-  ]);
+  const payload = parsePayload(html, "react-partial.embeddedData", ["props", "initialPayload"]);
 
   if (payload?.tree === undefined) {
     throw new Error("Could not find tree data in embedded JSON");
   }
 
   const info = parseRepoInfo(html);
+  const overviewHtml = extractOverviewHtml(payload);
 
-  return extractGitHub(payload, { items: payload.tree.items, info });
+  return extractGitHub(payload, { items: payload.tree.items, info, overviewHtml });
 }
 
 export async function getGitHubTree(
@@ -158,10 +167,7 @@ export async function getGitHubTree(
   // GitHub uses different formats for root vs subdirectories.
   const payload =
     // Root directory format.
-    parsePayload(html, "react-partial.embeddedData", [
-      "props",
-      "initialPayload",
-    ]) ||
+    parsePayload(html, "react-partial.embeddedData", ["props", "initialPayload"]) ||
     // Subdirectory format.
     parsePayload(html, "react-app.embeddedData", ["payload"]);
 
@@ -169,7 +175,9 @@ export async function getGitHubTree(
     throw new Error("Could not find tree data in embedded JSON");
   }
 
-  return extractGitHub(payload, { items: payload.tree.items });
+  const overviewHtml = extractOverviewHtml(payload);
+
+  return extractGitHub(payload, { items: payload.tree.items, overviewHtml });
 }
 
 export async function getGitHubBlob(
