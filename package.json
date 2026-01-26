@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "node --watch --watch-preserve-output src/index.ts",
-    "build": "rm -rf dist/* && esbuild --bundle --format=esm --platform=node --outdir=dist/build --sourcemap src/index.ts && cp -R static views dist/"
+    "build": "rm -rf dist/* && esbuild --bundle --format=esm --platform=node --outdir=dist/build --sourcemap src/index.ts && cp -R static views dist/",
+    "test": "node --test src/scraper.test.ts"
   },
   "dependencies": {
     "@hono/node-server": "^1.13.7",

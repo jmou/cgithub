@@ -63,7 +63,7 @@ export interface GitHubRepo extends GitHubTree {
 
 export interface GitHubBlob extends GitHubCommon {
   language: string | null;
-  size: number;
+  size: number | null;
   content: string;
   rawContent: string;
 }
@@ -210,10 +210,13 @@ export async function getGitHubBlob(
   const highlightedLines = blob.highlightedLines || [];
   const content = highlightedLines.map((line) => line.text || "").join("\n");
 
+  // Calculate size from raw content if not provided
+  const size = blob.size ?? (rawContent.length > 0 ? Buffer.byteLength(rawContent, "utf8") : null);
+
   return extractGitHub(payload, {
     content: content || rawContent,
     rawContent,
     language: blob.language || null,
-    size: blob.size,
+    size,
   });
 }
