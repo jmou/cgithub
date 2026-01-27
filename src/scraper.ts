@@ -1,3 +1,13 @@
+export class GitHubHTTPError extends Error {
+  status: number;
+
+  constructor(status: number, message: string) {
+    super(message);
+    this.name = "GitHubHTTPError";
+    this.status = status;
+  }
+}
+
 interface TreeItem {
   contentType: "directory" | "file";
   name: string;
@@ -78,6 +88,7 @@ async function fetchGitHubPage(path: string): Promise<string> {
     "Accept-Language": "en-US,en;q=0.5",
   };
   const response = await fetch(`https://github.com/${path}`, { headers });
+  if (!response.ok) throw new GitHubHTTPError(response.status, response.statusText);
   return response.text();
 }
 

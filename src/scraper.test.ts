@@ -1,6 +1,6 @@
 import assert from "node:assert";
 import { describe, it } from "node:test";
-import { getGitHubBlob, getGitHubRepo, getGitHubTree } from "./scraper.ts";
+import { getGitHubBlob, getGitHubRepo, getGitHubTree, GitHubHTTPError } from "./scraper.ts";
 
 describe("GitHub scraper", () => {
   describe("actions/deploy-pages repository", () => {
@@ -65,6 +65,16 @@ describe("GitHub scraper", () => {
       assert.strictEqual(data.language, "Text");
       assert.match(data.rawContent, /^MIT License\n\n/);
       assert.match(data.content, /^MIT License\n\n/);
+    });
+  });
+
+  describe("error handling", () => {
+    it("should throw for non-existent repository", async () => {
+      await assert.rejects(getGitHubRepo("nosuchowner", "nosuchrepo"), (err) => {
+        assert(err instanceof GitHubHTTPError, "error should be an HTTPError");
+        assert.strictEqual(err.status, 404);
+        return true;
+      });
     });
   });
 });

@@ -1,10 +1,11 @@
 import { createAdaptorServer, serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { Eta } from "eta";
-import { Hono } from "hono";
+import { type Context, Hono } from "hono";
+import type { StatusCode } from "hono/utils/http-status";
 import path from "node:path";
 import url from "node:url";
-import { getGitHubBlob, getGitHubRepo, getGitHubTree } from "./scraper.ts";
+import { getGitHubBlob, getGitHubRepo, getGitHubTree, GitHubHTTPError } from "./scraper.ts";
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 
@@ -17,22 +18,36 @@ app.get("/", async (c) => {
   return c.html(await eta.renderAsync("home.eta", {}));
 });
 
+async function tryRender<T extends object>(c: Context, template: string, promise: Promise<T>) {
+  let data: T;
+  try {
+    data = await promise;
+  } catch (e) {
+    if (e instanceof GitHubHTTPError) {
+      c.status(e.status as StatusCode);
+      const message = `GitHub responded with HTTP ${e.status} ${e.message}`;
+      return c.html(await eta.renderAsync("error.eta", { title: e.message, message }));
+    } else {
+      c.status(500);
+      return c.html(await eta.renderAsync("error.eta", { message: "" + e }));
+    }
+  }
+  return c.html(await eta.renderAsync(template, data));
+}
+
 app.get("/:owner/:repo", async (c) => {
   const { owner, repo } = c.req.param();
-  const data = await getGitHubRepo(owner, repo);
-  return c.html(await eta.renderAsync("repo.eta", data));
+  return tryRender(c, "repo.eta", getGitHubRepo(owner, repo));
 });
 
 app.get("/:owner/:repo/tree/:branch/:path{.*}?", async (c) => {
   const { owner, repo, branch, path = "" } = c.req.param();
-  const data = await getGitHubTree(owner, repo, branch, path);
-  return c.html(await eta.renderAsync("tree.eta", data));
+  return tryRender(c, "tree.eta", getGitHubTree(owner, repo, branch, path));
 });
 
 app.get("/:owner/:repo/blob/:branch/:path{.*}", async (c) => {
   const { owner, repo, branch, path } = c.req.param();
-  const data = await getGitHubBlob(owner, repo, branch, path);
-  return c.html(await eta.renderAsync("blob.eta", data));
+  return tryRender(c, "blob.eta", getGitHubBlob(owner, repo, branch, path));
 });
 
 app.get("/:owner/:repo/raw/:branch/:path{.*}", async (c) => {
