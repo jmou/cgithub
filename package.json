@@ -2,6 +2,7 @@
   "name": "cgithub",
   "version": "1.0.0",
   "description": "Lightweight GitHub alternative frontend",
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "dev": "node --watch --watch-preserve-output src/index.ts",
