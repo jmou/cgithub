@@ -39,7 +39,11 @@ a {
   color: var(--link-color);
 }
 
-body > header, .box {
+section {
+  margin: 1rem 0;
+}
+
+.box {
   --box-padding: .5rem;
 
   margin: 1rem 0;
@@ -79,7 +83,6 @@ footer {
 }
 
 .repo {
-  margin-bottom: 1rem;
   font-size: 120%;
   font-weight: bold;
 }

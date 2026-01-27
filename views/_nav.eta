@@ -1,0 +1,18 @@
+<section>
+  <div class="branch"><img src="/static/icons/git-branch.svg" alt="branch" class="icon"> <%= it.branch %></div>
+  <% if (it.path && it.path !== "/") { %>
+    <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/tree/<%= it.branch %>">(top)</a><%
+    const pathParts = it.path.split('/').filter(p => p);
+    let currentPath = '';
+    for (let i = 0; i < pathParts.length; i++) {
+      const part = pathParts[i];
+      currentPath += (currentPath ? '/' : '') + part;
+      const isLast = i === pathParts.length - 1;
+      if (isLast) {
+        %>/<%= part %><%= it.isTree ? "/" : "" %><%
+      } else {
+        %>/<a href="/<%= it.repo.owner %>/<%= it.repo.name %>/tree/<%= it.branch %>/<%= currentPath %>"><%= part %></a><%
+      }
+    } %>
+  <% } %>
+</section>

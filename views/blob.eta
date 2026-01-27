@@ -1,4 +1,6 @@
-<% layout("./layout") %>
+<% layout("./layout.eta") %>
+
+<%~ include("./_nav.eta", it) %>
 
 <div>
   <% if (it.language) { %>

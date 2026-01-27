@@ -1,3 +1,5 @@
+<%~ include("./_nav.eta", {...it, isTree: true}) %>
+
 <table>
   <% for (const item of it.items) { %>
     <tr>

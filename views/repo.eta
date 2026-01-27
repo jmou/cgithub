@@ -1,4 +1,4 @@
-<% layout("./layout") %>
+<% layout("./layout.eta") %>
 
 <% if (it.info) { %>
   <div class="box">

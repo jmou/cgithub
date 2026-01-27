@@ -6,29 +6,11 @@
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-  <header>
+  <div class="box">
     <div class="repo"><%= it.repo.owner %>/<%= it.repo.name %></div>
-    <div class="branch"><img src="/static/icons/git-branch.svg" alt="branch" class="icon"> <%= it.branch %></div>
-    <% if (it.path) { %>
-      <span>
-        <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/tree/<%= it.branch %>">(top)</a><%
-        const pathParts = it.path.split('/').filter(p => p);
-        let currentPath = '';
-        for (let i = 0; i < pathParts.length; i++) {
-          const part = pathParts[i];
-          currentPath += (currentPath ? '/' : '') + part;
-          const isLast = i === pathParts.length - 1;
-          if (isLast) {
-            %>/<%= part %><%
-          } else {
-            %>/<a href="/<%= it.repo.owner %>/<%= it.repo.name %>/tree/<%= it.branch %>/<%= currentPath %>"><%= part %></a><%
-          }
-        } %>
-      </span>
-    <% } %>
     <pre><code>git clone https://github.com/<%= it.repo.owner %>/<%= it.repo.name %>.git
 git clone git@github.com:<%= it.repo.owner %>/<%= it.repo.name %>.git</code></pre>
-  </header>
+  </div>
 
   <%~ it.body %>
 
