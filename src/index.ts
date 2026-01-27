@@ -5,7 +5,13 @@ import { type Context, Hono } from "hono";
 import type { StatusCode } from "hono/utils/http-status";
 import path from "node:path";
 import url from "node:url";
-import { getGitHubBlob, getGitHubRepo, getGitHubTree, GitHubHTTPError } from "./scraper.ts";
+import {
+  getGitHubBlob,
+  getGitHubIssues,
+  getGitHubRepo,
+  getGitHubTree,
+  GitHubHTTPError,
+} from "./scraper.ts";
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 
@@ -54,6 +60,11 @@ app.get("/:owner/:repo/raw/:branch/:path{.*}", async (c) => {
   const { owner, repo, branch, path } = c.req.param();
   c.header("Referrer-Policy", "no-referrer");
   return c.redirect(`https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${path}`);
+});
+
+app.get("/:owner/:repo/issues", async (c) => {
+  const { owner, repo } = c.req.param();
+  return tryRender(c, "issues.eta", getGitHubIssues(owner, repo));
 });
 
 app.all("*", async (c) => {

@@ -1,0 +1,20 @@
+<% layout("./layout") %>
+
+<table>
+  <% for (const issue of it.issues) { %>
+    <tr>
+      <td>#<%= issue.number %></td>
+      <td>
+        <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/issues/<%= issue.number %>">
+          <%= issue.title %>
+        </a>
+      </td>
+      <td>
+        <% if (issue.commentCount > 0) { %>
+          <img src="/static/icons/link.svg" alt="comments" class="icon"> <%= issue.commentCount %>
+        <% } %>
+      </td>
+      <td class="timestamp"><time title="<%= issue.createdAt %>"><%= issue.createdAt.split("T")[0] %></time></td>
+    </tr>
+  <% } %>
+</table>

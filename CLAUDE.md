@@ -1,10 +1,6 @@
-# CLAUDE.md
-
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
 ## Project Overview
 
-cgithub is a lightweight GitHub alternative frontend that scrapes GitHub's server-rendered HTML instead of using the API. This approach avoids API rate limits entirely by extracting embedded JSON data from `<script type="application/json">` tags that GitHub includes for hydration.
+cgithub is a lightweight GitHub alternative frontend that scrapes GitHub's server-rendered HTML instead of using the API. Data is usually extracted from embedded JSON data from `<script type="application/json">` tags that GitHub includes for hydration.
 
 ## Commands
 
@@ -15,8 +11,8 @@ pnpm run dev
 # Production build (bundles to dist/)
 pnpm run build
 
-# Deploy to production server
-make deploy
+# Run tests
+pnpm test
 ```
 
 ## Architecture
@@ -30,13 +26,11 @@ make deploy
 **Templates:** `views/*.eta` - Eta templates with layout inheritance (`layout.eta` as base)
 
 **Routes:**
-- `GET /` - Home page
 - `GET /:owner/:repo` - Repository info with directory listing
 - `GET /:owner/:repo/tree/:branch/:path*` - Directory listing
 - `GET /:owner/:repo/blob/:branch/:path` - File content view
 
-**Scraper pattern:** GitHub embeds tree/blob data in two formats depending on page type:
-- `react-partial.embeddedData` (props.initialPayload) for root directories
-- `react-app.embeddedData` (payload) for subdirectories and blobs
+## Instructions
 
-The scraper uses browser-like headers to avoid throttling.
+- Use `for (const ... of ...)` instead of `.forEach()`
+- Update `scraper.test.ts`

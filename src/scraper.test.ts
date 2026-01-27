@@ -1,6 +1,12 @@
 import assert from "node:assert";
 import { describe, it } from "node:test";
-import { getGitHubBlob, getGitHubRepo, getGitHubTree, GitHubHTTPError } from "./scraper.ts";
+import {
+  getGitHubBlob,
+  getGitHubIssues,
+  getGitHubRepo,
+  getGitHubTree,
+  GitHubHTTPError,
+} from "./scraper.ts";
 
 describe("GitHub scraper", () => {
   describe("actions/deploy-pages repository", () => {
@@ -65,6 +71,19 @@ describe("GitHub scraper", () => {
       assert.strictEqual(data.language, "Text");
       assert.match(data.rawContent, /^MIT License\n\n/);
       assert.match(data.content, /^MIT License\n\n/);
+    });
+
+    it("should fetch issues", async () => {
+      const data = await getGitHubIssues("actions", "deploy-pages");
+
+      assert.strictEqual(data.repo.owner, "actions");
+      assert.strictEqual(data.repo.name, "deploy-pages");
+
+      const issue402 = data.issues.find((issue) => issue.number === 402);
+      assert.ok(issue402);
+      assert.strictEqual(issue402.title, "Dry Run");
+      assert.strictEqual(issue402.state, "OPEN");
+      assert.strictEqual(issue402.createdAt, "2025-07-03T19:07:08Z");
     });
   });
 

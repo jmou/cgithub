@@ -21,6 +21,38 @@ interface OverviewFile {
   loaded: boolean;
 }
 
+interface IssueNode {
+  number: number;
+  title: string;
+  author?: {
+    login: string;
+  };
+  createdAt: string;
+  state: string;
+  labels?: {
+    edges: {
+      node: {
+        name: string;
+      };
+    }[];
+  };
+}
+
+interface IssueIndexPageQuery {
+  queryName: "IssueIndexPageQuery";
+  result: {
+    data: {
+      repository: {
+        search: {
+          edges: {
+            node: IssueNode;
+          }[];
+        };
+      };
+    };
+  };
+}
+
 interface RawPayload {
   repo: {
     ownerLogin: string;
@@ -42,6 +74,8 @@ interface RawPayload {
   overview?: {
     overviewFiles?: OverviewFile[];
   };
+  // Actually there may be other query types.
+  preloadedQueries?: IssueIndexPageQuery[];
 }
 
 interface GitHubCommon {
@@ -49,11 +83,14 @@ interface GitHubCommon {
     owner: string;
     name: string;
   };
+}
+
+interface GitHubNav extends GitHubCommon {
   branch: string;
   path: string;
 }
 
-export interface GitHubTree extends GitHubCommon {
+export interface GitHubTree extends GitHubNav {
   items: TreeItem[];
   overviewHtml?: Record<string, string>;
 }
@@ -71,11 +108,24 @@ export interface GitHubRepo extends GitHubTree {
   info: RepoInfo;
 }
 
-export interface GitHubBlob extends GitHubCommon {
+export interface GitHubBlob extends GitHubNav {
   language: string | null;
   size: number | null;
   content: string;
   rawContent: string;
+}
+
+interface Issue {
+  number: number;
+  title: string;
+  state: string;
+  createdAt: string;
+  numReplies?: number;
+  numPRs?: number;
+}
+
+export interface GitHubIssues extends GitHubCommon {
+  issues: Issue[];
 }
 
 async function fetchGitHubPage(path: string): Promise<string> {
@@ -150,7 +200,7 @@ function extractOverviewHtml(payload: RawPayload): Record<string, string> | unde
   return Object.keys(result).length > 0 ? result : undefined;
 }
 
-function extractGitHub<T>(payload: RawPayload, extra: T): GitHubCommon & T {
+function extractGitHub<T>(payload: RawPayload, extra: T): GitHubNav & T {
   return {
     repo: {
       owner: payload.repo.ownerLogin,
@@ -230,4 +280,33 @@ export async function getGitHubBlob(
     language: blob.language || null,
     size,
   });
+}
+
+export async function getGitHubIssues(owner: string, repo: string): Promise<GitHubIssues> {
+  const html = await fetchGitHubPage(`${owner}/${repo}/issues`);
+
+  const payload = parsePayload(html, "react-app.embeddedData", ["payload"]);
+
+  let issuesQuery: IssueIndexPageQuery | undefined;
+  for (const query of payload?.preloadedQueries ?? []) {
+    if (query.queryName === "IssueIndexPageQuery") {
+      issuesQuery = query;
+    }
+  }
+  if (issuesQuery === undefined) {
+    throw new Error("Could not find IssueIndexPageQuery in embedded JSON");
+  }
+
+  const issues: Issue[] = issuesQuery.result.data.repository.search.edges.map((edge) => {
+    const { number, title, state, createdAt } = edge.node;
+    return { number, title, state, createdAt };
+  });
+
+  return {
+    repo: {
+      owner,
+      name: repo,
+    },
+    issues,
+  };
 }

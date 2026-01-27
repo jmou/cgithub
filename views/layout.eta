@@ -10,6 +10,10 @@
     <div class="repo"><%= it.repo.owner %>/<%= it.repo.name %></div>
     <pre><code>git clone https://github.com/<%= it.repo.owner %>/<%= it.repo.name %>.git
 git clone git@github.com:<%= it.repo.owner %>/<%= it.repo.name %>.git</code></pre>
+    <nav>
+      <a href="/<%= it.repo.owner %>/<%= it.repo.name %>">Code</a>
+      <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/issues">Issues</a>
+    </nav>
   </div>
 
   <%~ it.body %>
