@@ -1,81 +1,60 @@
-# GitHub Directory Listing Without API
+cgithub is a lightweight GitHub alternative frontend. It has no bloated
+JavaScript and doesn't require API keys. To use it, host cgithub on your own
+server then replace `github.com` in your URL with your domain.
 
-## Summary
+## Development
 
-GitHub repository directory listings can be obtained **without using the API and without rate limits** by scraping the server-rendered HTML that GitHub sends to browsers.
-
-## How It Works
-
-When you visit a GitHub repository page in a browser, GitHub server-side renders the directory listing and embeds it as JSON data within `<script>` tags in the HTML. This approach avoids API rate limits entirely.
-
-## The Pattern
-
-**URL Pattern:** `https://github.com/{owner}/{repo}/tree/main/{path}`
-
-This single URL pattern works for both root directories (with empty path) and subdirectories.
-
-**Data Location:**
-```html
-<script type="application/json" data-target="react-app.embeddedData">
-  {
-    "payload": {
-      "tree": {
-        "items": [...]
-      },
-      ...
-    }
-  }
-</script>
+To run the server locally:
+```
+$ pnpm run dev
 ```
 
-**Access Path:** `data.payload.tree.items`
+To run tests:
+```
+$ pnpm test
+```
 
-## Item Structure
+## Deployment
 
-Each item in the `items` array has this structure:
+Assuming you have a server `jupiter`, you might deploy like:
+```
+$ pnpm run build
+$ rsync -av --del dist jupiter:/opt/cgithub
+```
 
-```json
-{
-  "name": "filename.txt",
-  "path": "path/to/filename.txt",
-  "contentType": "file"  // or "directory"
+To configure systemd socket activation use a `cgithub.socket` file:
+```
+[Socket]
+ListenStream=/run/cgithub/socket
+SocketGroup=nginx
+SocketMode=0660
+
+[Install]
+WantedBy=sockets.target
+```
+
+And a service file `cgithub.service`:
+```
+[Unit]
+After=cgithub.socket
+Requires=cgithub.socket
+
+[Service]
+Type=exec
+WorkingDirectory=/opt/cgithub
+ExecStart=/usr/bin/node dist/build/index.js
+DynamicUser=true
+```
+
+An nginx config snippet might be:
+```
+location / {
+    proxy_pass http://unix:/run/cgithub/socket;
 }
 ```
 
-## Complete Example
+## Disclosures
 
-See `github-scraper.js` for a working implementation that:
-- Fetches the HTML from GitHub
-- Extracts the embedded JSON data
-- Parses and returns the directory listing
-- Works for both root and subdirectories
-- Has zero API rate limits
+AI coding assistants, in particular Claude, are used in the development process.
 
-## Usage
-
-```bash
-node github-scraper.js torvalds linux              # Root directory
-node github-scraper.js torvalds linux Documentation # Subdirectory
-node github-scraper.js git git Documentation/git    # Nested subdirectory
-```
-
-## Advantages Over API
-
-| Feature | HTML Scraping | GitHub API |
-|---------|--------------|------------|
-| Rate Limits | None | 60/hour (unauth), 5000/hour (auth) |
-| Authentication | Not required | Optional, but limits apply |
-| Access | Any public repo | Any public repo |
-| Stability | Depends on HTML structure | Stable API contract |
-
-## Important Notes
-
-1. **No authentication needed** - Works for all public repositories
-2. **No rate limits** - Can scrape as many repos as needed
-3. **Less stable** - HTML structure may change with GitHub updates
-4. **Best for:** One-off scripts, personal tools, exploratory work
-5. **Use API for:** Production applications, long-term projects
-
-## Why This Works
-
-GitHub uses server-side rendering to provide fast initial page loads. The directory data is embedded in the HTML so the page can render immediately without waiting for additional API calls. This embedded data is the same data that would come from the API, just pre-rendered in the page.
+[Phospor Icons](https://phosphoricons.com/) used under MIT license.
