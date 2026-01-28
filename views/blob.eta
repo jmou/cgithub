@@ -12,7 +12,9 @@
   </div>
 </div>
 
-<% if (it.htmlContent) { %>
+<% if (it.image) { %>
+  <div class="box"><img src="/<%= it.repo.owner %>/<%= it.repo.name %>/raw/<%= it.branch %>/<%= it.path %>"></div>
+<% } else if (it.htmlContent) { %>
   <div class="box"><%~ it.htmlContent %></div>
 <% } else if (it.htmlLines) { %>
   <pre class="box"><code><%~ it.htmlLines.join("\n") %></code></pre>

@@ -68,11 +68,12 @@ interface RawPayload {
     headerInfo: {
       blobSize: string;
       lineInfo: {
-        truncatedLoc: string;
-        truncatedSloc: string;
+        truncatedLoc: string | null;
+        truncatedSloc: string | null;
       };
     };
-    language?: string;
+    language: string | null;
+    image: boolean;
     rawLines: string[] | null;
     colorizedLines: string[] | null;
     richText: string | null;
@@ -139,6 +140,7 @@ export interface GitHubRepo extends GitHubTree {
 export interface GitHubBlob extends GitHubNav {
   language: string | null;
   size: string;
+  image: boolean;
   textLines: string[] | null;
   htmlLines: string[] | null;
   htmlContent: string | null;
@@ -302,12 +304,18 @@ export async function getGitHubBlob(
     htmlLines = blob.rawLines.map((line, i) => applyStyling(line, stylingDirectives[i]));
   }
 
-  // TODO fine tune
-  const size = `${headerInfo.blobSize} / ${headerInfo.lineInfo.truncatedLoc} lines / ${headerInfo.lineInfo.truncatedSloc} loc`;
+  let size = headerInfo.blobSize;
+  if (headerInfo.lineInfo.truncatedLoc) {
+    size += ` / ${headerInfo.lineInfo.truncatedLoc} lines`;
+  }
+  if (headerInfo.lineInfo.truncatedSloc) {
+    size += ` / ${headerInfo.lineInfo.truncatedSloc} loc`;
+  }
 
   return extractGitHub(payload, {
     language: blob.language || null,
     size,
+    image: blob.image,
     textLines: blob.rawLines,
     htmlLines,
     htmlContent: blob.richText,

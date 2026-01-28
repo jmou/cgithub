@@ -69,6 +69,8 @@ describe("GitHub scraper", () => {
 
       assert.strictEqual(data.size, "1.04 KB / 21 lines / 17 loc");
       assert.strictEqual(data.language, "Text");
+      assert.strictEqual(data.image, false);
+
       assert.strictEqual(data.textLines?.length, 21);
       assert.strictEqual(data.textLines[0], "MIT License");
       assert.strictEqual(data.htmlLines?.length, 21);
@@ -86,6 +88,8 @@ describe("GitHub scraper", () => {
 
       assert.strictEqual(data.size, "8.95 KB / 133 lines / 94 loc");
       assert.strictEqual(data.language, "Markdown");
+      assert.strictEqual(data.image, false);
+
       assert.strictEqual(data.textLines, null);
       assert.strictEqual(data.htmlLines, null);
       const firstLine =
@@ -103,6 +107,8 @@ describe("GitHub scraper", () => {
 
       assert.strictEqual(data.size, "39 Bytes / 1 lines / 1 loc");
       assert.strictEqual(data.language, "Git Attributes");
+      assert.strictEqual(data.image, false);
+
       assert.deepStrictEqual(data.textLines, ["dist/** -diff linguist-generated=true "]);
       assert.deepStrictEqual(data.htmlLines, [
         '\u003cspan class="pl-e"\u003edist\u003c/span\u003e/\u003cspan class="pl-k"\u003e**\u003c/span\u003e \u003cspan class="pl-k"\u003e-\u003c/span\u003e\u003cspan class="pl-v"\u003ediff\u003c/span\u003e \u003cspan class="pl-v"\u003elinguist-generated\u003c/span\u003e=\u003cspan class="pl-c1"\u003etrue\u003c/span\u003e ',
@@ -121,6 +127,24 @@ describe("GitHub scraper", () => {
       assert.strictEqual(issue402.title, "Dry Run");
       assert.strictEqual(issue402.state, "OPEN");
       assert.strictEqual(issue402.createdAt, "2025-07-03T19:07:08Z");
+    });
+  });
+
+  describe("rich file types", () => {
+    it("should support PNG", async () => {
+      const data = await getGitHubBlob("github", "docs", "main", "assets/images/site/logo.png");
+
+      assert.strictEqual(data.repo.owner, "github");
+      assert.strictEqual(data.repo.name, "docs");
+      assert.strictEqual(data.branch, "main");
+      assert.strictEqual(data.path, "assets/images/site/logo.png");
+
+      assert.strictEqual(data.size, "1.26 KB");
+      assert.strictEqual(data.language, null);
+      assert.strictEqual(data.image, true);
+      assert.strictEqual(data.textLines, null);
+      assert.strictEqual(data.htmlLines, null);
+      assert.strictEqual(data.htmlContent, null);
     });
   });
 
