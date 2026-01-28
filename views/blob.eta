@@ -6,12 +6,14 @@
   <% if (it.language) { %>
     <div>language: <%= it.language %></div>
   <% } %>
-  <% if (it.size !== undefined) { %>
-    <div>size: <%= it.size %> bytes</div>
-  <% } %>
+  <div><%= it.size %></div>
   <div>
     <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/raw/<%= it.branch %>/<%= it.path %>">Raw</a>
   </div>
 </div>
 
-<pre class="box"><code><%= it.rawContent %></code></pre>
+<% if (it.htmlContent) { %>
+  <div class="box"><%~ it.htmlContent %></div>
+<% } else { %>
+  <pre class="box"><code><%= it.rawLines.join("\n") %></code></pre>
+<% } %>

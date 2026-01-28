@@ -59,7 +59,7 @@ describe("GitHub scraper", () => {
       ]);
     });
 
-    it("should fetch blob", async () => {
+    it("should fetch text blob", async () => {
       const data = await getGitHubBlob("actions", "deploy-pages", "main", "LICENSE");
 
       assert.strictEqual(data.repo.owner, "actions");
@@ -67,10 +67,40 @@ describe("GitHub scraper", () => {
       assert.strictEqual(data.branch, "main");
       assert.strictEqual(data.path, "LICENSE");
 
-      assert.strictEqual(data.size, 1068);
+      assert.strictEqual(data.size, "1.04 KB / 21 lines / 17 loc");
       assert.strictEqual(data.language, "Text");
-      assert.match(data.rawContent, /^MIT License\n\n/);
-      assert.match(data.content, /^MIT License\n\n/);
+      assert.strictEqual(data.rawLines?.[0], "MIT License");
+      assert.strictEqual(data.htmlContent, null);
+    });
+
+    it("should fetch Markdown blob", async () => {
+      const data = await getGitHubBlob("actions", "deploy-pages", "main", "README.md");
+
+      assert.strictEqual(data.repo.owner, "actions");
+      assert.strictEqual(data.repo.name, "deploy-pages");
+      assert.strictEqual(data.branch, "main");
+      assert.strictEqual(data.path, "README.md");
+
+      assert.strictEqual(data.size, "8.95 KB / 133 lines / 94 loc");
+      assert.strictEqual(data.language, "Markdown");
+      assert.strictEqual(data.rawLines, null);
+      const firstLine =
+        /^<article class="markdown-body entry-content container-lg" itemprop="text"><div class="markdown-heading" dir="auto"><h1 tabindex="-1" class="heading-element" dir="auto">deploy-pages 🚀<\/h1>/;
+      assert.match(data.htmlContent ?? "", firstLine);
+    });
+
+    it("should fetch code blob", async () => {
+      const data = await getGitHubBlob("actions", "deploy-pages", "main", ".gitattributes");
+
+      assert.strictEqual(data.repo.owner, "actions");
+      assert.strictEqual(data.repo.name, "deploy-pages");
+      assert.strictEqual(data.branch, "main");
+      assert.strictEqual(data.path, ".gitattributes");
+
+      assert.strictEqual(data.size, "39 Bytes / 1 lines / 1 loc");
+      assert.strictEqual(data.language, "Git Attributes");
+      assert.deepStrictEqual(data.rawLines, ["dist/** -diff linguist-generated=true "]);
+      assert.strictEqual(data.htmlContent, null);
     });
 
     it("should fetch issues", async () => {

@@ -16,7 +16,6 @@ interface TreeItem {
 
 interface OverviewFile {
   displayName: string;
-  preferredFileType: string;
   richText?: string;
   loaded: boolean;
 }
@@ -64,12 +63,17 @@ interface RawPayload {
     items: TreeItem[];
   };
   blob?: {
+    headerInfo: {
+      blobSize: string;
+      lineInfo: {
+        truncatedLoc: string;
+        truncatedSloc: string;
+      };
+    };
     language?: string;
-    rawLines?: string[];
-    highlightedLines?: {
-      text?: string;
-    }[];
-    size: number;
+    rawLines: string[] | null;
+    colorizedLines: string[] | null;
+    richText: string | null;
   };
   overview?: {
     overviewFiles?: OverviewFile[];
@@ -110,9 +114,9 @@ export interface GitHubRepo extends GitHubTree {
 
 export interface GitHubBlob extends GitHubNav {
   language: string | null;
-  size: number | null;
-  content: string;
-  rawContent: string;
+  size: string;
+  rawLines: string[] | null;
+  htmlContent: string | null;
 }
 
 interface Issue {
@@ -265,20 +269,15 @@ export async function getGitHubBlob(
     throw new Error("Could not find blob data in embedded JSON");
   }
 
-  const blob = payload.blob;
-  const rawLines = blob.rawLines || [];
-  const rawContent = rawLines.join("\n");
-  const highlightedLines = blob.highlightedLines || [];
-  const content = highlightedLines.map((line) => line.text || "").join("\n");
-
-  // Calculate size from raw content if not provided
-  const size = blob.size ?? (rawContent.length > 0 ? Buffer.byteLength(rawContent, "utf8") : null);
+  const { headerInfo, language, rawLines, richText } = payload.blob;
+  // TODO fine tune
+  const size = `${headerInfo.blobSize} / ${headerInfo.lineInfo.truncatedLoc} lines / ${headerInfo.lineInfo.truncatedSloc} loc`;
 
   return extractGitHub(payload, {
-    content: content || rawContent,
-    rawContent,
-    language: blob.language || null,
+    language: language || null,
     size,
+    rawLines,
+    htmlContent: richText,
   });
 }
 

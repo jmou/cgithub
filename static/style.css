@@ -163,14 +163,14 @@ pre.box {
   code {
     background: var(--shade-background);
   }
-
-  /* TODO Strip permalinks? */
-  svg.octicon-link {
-    display: none;
-  }
 }
 
 .timestamp {
   white-space: nowrap;
   font-size: .8rem;
+}
+
+/* TODO Strip permalinks? */
+svg.octicon-link {
+  display: none;
 }
