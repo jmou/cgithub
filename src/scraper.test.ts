@@ -69,7 +69,10 @@ describe("GitHub scraper", () => {
 
       assert.strictEqual(data.size, "1.04 KB / 21 lines / 17 loc");
       assert.strictEqual(data.language, "Text");
-      assert.strictEqual(data.rawLines?.[0], "MIT License");
+      assert.strictEqual(data.textLines?.length, 21);
+      assert.strictEqual(data.textLines[0], "MIT License");
+      assert.strictEqual(data.htmlLines?.length, 21);
+      assert.strictEqual(data.htmlLines[0], "MIT License");
       assert.strictEqual(data.htmlContent, null);
     });
 
@@ -83,7 +86,8 @@ describe("GitHub scraper", () => {
 
       assert.strictEqual(data.size, "8.95 KB / 133 lines / 94 loc");
       assert.strictEqual(data.language, "Markdown");
-      assert.strictEqual(data.rawLines, null);
+      assert.strictEqual(data.textLines, null);
+      assert.strictEqual(data.htmlLines, null);
       const firstLine =
         /^<article class="markdown-body entry-content container-lg" itemprop="text"><div class="markdown-heading" dir="auto"><h1 tabindex="-1" class="heading-element" dir="auto">deploy-pages 🚀<\/h1>/;
       assert.match(data.htmlContent ?? "", firstLine);
@@ -99,7 +103,10 @@ describe("GitHub scraper", () => {
 
       assert.strictEqual(data.size, "39 Bytes / 1 lines / 1 loc");
       assert.strictEqual(data.language, "Git Attributes");
-      assert.deepStrictEqual(data.rawLines, ["dist/** -diff linguist-generated=true "]);
+      assert.deepStrictEqual(data.textLines, ["dist/** -diff linguist-generated=true "]);
+      assert.deepStrictEqual(data.htmlLines, [
+        '\u003cspan class="pl-e"\u003edist\u003c/span\u003e/\u003cspan class="pl-k"\u003e**\u003c/span\u003e \u003cspan class="pl-k"\u003e-\u003c/span\u003e\u003cspan class="pl-v"\u003ediff\u003c/span\u003e \u003cspan class="pl-v"\u003elinguist-generated\u003c/span\u003e=\u003cspan class="pl-c1"\u003etrue\u003c/span\u003e ',
+      ]);
       assert.strictEqual(data.htmlContent, null);
     });
 

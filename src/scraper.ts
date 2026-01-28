@@ -52,6 +52,8 @@ interface IssueIndexPageQuery {
   };
 }
 
+type StylingDirective = [number, number, string];
+
 interface RawPayload {
   repo: {
     ownerLogin: string;
@@ -74,12 +76,34 @@ interface RawPayload {
     rawLines: string[] | null;
     colorizedLines: string[] | null;
     richText: string | null;
+    stylingDirectives: StylingDirective[][] | null;
   };
   overview?: {
     overviewFiles?: OverviewFile[];
   };
   // Actually there may be other query types.
   preloadedQueries?: IssueIndexPageQuery[];
+}
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function applyStyling(line: string, directives: StylingDirective[]): string {
+  let result = "";
+  let lastPos = 0;
+  for (const [start, end, className] of directives) {
+    result += escapeHtml(line.substring(lastPos, start));
+    result += `<span class="${className}">${escapeHtml(line.substring(start, end))}</span>`;
+    lastPos = end;
+  }
+  result += escapeHtml(line.substring(lastPos));
+  return result;
 }
 
 interface GitHubCommon {
@@ -115,7 +139,8 @@ export interface GitHubRepo extends GitHubTree {
 export interface GitHubBlob extends GitHubNav {
   language: string | null;
   size: string;
-  rawLines: string[] | null;
+  textLines: string[] | null;
+  htmlLines: string[] | null;
   htmlContent: string | null;
 }
 
@@ -269,15 +294,23 @@ export async function getGitHubBlob(
     throw new Error("Could not find blob data in embedded JSON");
   }
 
-  const { headerInfo, language, rawLines, richText } = payload.blob;
+  const blob = payload.blob;
+  const { headerInfo, stylingDirectives } = blob;
+
+  let htmlLines = blob.colorizedLines;
+  if (!htmlLines && stylingDirectives && blob.rawLines) {
+    htmlLines = blob.rawLines.map((line, i) => applyStyling(line, stylingDirectives[i]));
+  }
+
   // TODO fine tune
   const size = `${headerInfo.blobSize} / ${headerInfo.lineInfo.truncatedLoc} lines / ${headerInfo.lineInfo.truncatedSloc} loc`;
 
   return extractGitHub(payload, {
-    language: language || null,
+    language: blob.language || null,
     size,
-    rawLines,
-    htmlContent: richText,
+    textLines: blob.rawLines,
+    htmlLines,
+    htmlContent: blob.richText,
   });
 }
 
