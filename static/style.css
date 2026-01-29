@@ -178,6 +178,26 @@ pre.box {
   font-size: .8rem;
 }
 
+.commit {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem;
+  border: 1px solid var(--border-color);
+  + .commit {
+    border-top: none;
+  }
+}
+
+.commit-author {
+  font-size: 0.8rem;
+  margin-top: 0.2rem;
+}
+
+.commit-sha {
+  align-self: center;
+  font-size: 0.8rem;
+}
+
 /* TODO Strip permalinks? */
 svg.octicon-link {
   display: none;

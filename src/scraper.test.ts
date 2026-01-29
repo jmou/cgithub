@@ -2,6 +2,7 @@ import assert from "node:assert";
 import { describe, it } from "node:test";
 import {
   getGitHubBlob,
+  getGitHubCommits,
   getGitHubIssues,
   getGitHubRepo,
   getGitHubTree,
@@ -127,6 +128,36 @@ describe("GitHub scraper", () => {
       assert.strictEqual(issue402.title, "Dry Run");
       assert.strictEqual(issue402.state, "OPEN");
       assert.strictEqual(issue402.createdAt, "2025-07-03T19:07:08Z");
+    });
+
+    it("should fetch commits", async () => {
+      const data = await getGitHubCommits("actions", "deploy-pages", "main", "");
+
+      assert.strictEqual(data.repo.owner, "actions");
+      assert.strictEqual(data.repo.name, "deploy-pages");
+      assert.strictEqual(data.branch, "main");
+      assert.strictEqual(data.path, "");
+
+      assert.ok(data.commitGroups.length > 0);
+      const firstGroup = data.commitGroups[0];
+      assert.ok(firstGroup.title.length > 0);
+      assert.ok(firstGroup.commits.length > 0);
+
+      const firstCommit = firstGroup.commits[0];
+      assert.ok(firstCommit.oid.length === 40);
+      assert.ok(firstCommit.shortMessage.length > 0);
+      assert.ok(firstCommit.authors.length > 0);
+    });
+
+    it("should fetch commits with path", async () => {
+      const data = await getGitHubCommits("actions", "deploy-pages", "main", "src");
+
+      assert.strictEqual(data.repo.owner, "actions");
+      assert.strictEqual(data.repo.name, "deploy-pages");
+      assert.strictEqual(data.branch, "main");
+      assert.strictEqual(data.path, "src");
+
+      assert.ok(data.commitGroups.length > 0);
     });
   });
 

@@ -1,0 +1,25 @@
+<% layout("./layout.eta") %>
+
+<%~ include("./_nav.eta", {...it, isTree: false}) %>
+
+<% for (const group of it.commitGroups) { %>
+  <h3><%= group.title %></h3>
+  <% for (const commit of group.commits) { %>
+    <div class="commit">
+      <div>
+        <div>
+          <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/commit/<%= commit.oid %>"><%= commit.shortMessage %></a>
+        </div>
+        <div class="commit-author">
+          by
+          <% for (const author of commit.authors) { %>
+            <a href="/<%= author.login %>"><%= author.login %></a>
+          <% } %>
+        </div>
+      </div>
+      <div class="commit-sha">
+        <code><%= commit.oid.substring(0, 7) %></code>
+      </div>
+    </div>
+  <% } %>
+<% } %>

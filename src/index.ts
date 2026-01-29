@@ -7,6 +7,7 @@ import path from "node:path";
 import url from "node:url";
 import {
   getGitHubBlob,
+  getGitHubCommits,
   getGitHubIssues,
   getGitHubRepo,
   getGitHubTree,
@@ -65,6 +66,11 @@ app.get("/:owner/:repo/raw/:branch/:path{.*}", async (c) => {
 app.get("/:owner/:repo/issues", async (c) => {
   const { owner, repo } = c.req.param();
   return tryRender(c, "issues.eta", getGitHubIssues(owner, repo));
+});
+
+app.get("/:owner/:repo/commits/:branch/:path{.*}?", async (c) => {
+  const { owner, repo, branch, path = "" } = c.req.param();
+  return tryRender(c, "commits.eta", getGitHubCommits(owner, repo, branch, path));
 });
 
 app.all("*", async (c) => {

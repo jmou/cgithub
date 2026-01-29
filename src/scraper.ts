@@ -54,6 +54,26 @@ interface IssueIndexPageQuery {
 
 type StylingDirective = [number, number, string];
 
+interface Commit {
+  oid: string;
+  url: string;
+  authoredDate: string;
+  committedDate: string;
+  shortMessage: string;
+  bodyMessageHtml: string;
+  authors: {
+    login: string;
+    displayName: string;
+    avatarUrl: string;
+    path: string;
+  }[];
+}
+
+export interface CommitGroup {
+  title: string;
+  commits: Commit[];
+}
+
 interface RawPayload {
   repo: {
     ownerLogin: string;
@@ -82,6 +102,7 @@ interface RawPayload {
   overview?: {
     overviewFiles?: OverviewFile[];
   };
+  commitGroups?: CommitGroup[];
   // Actually there may be other query types.
   preloadedQueries?: IssueIndexPageQuery[];
 }
@@ -157,6 +178,10 @@ interface Issue {
 
 export interface GitHubIssues extends GitHubCommon {
   issues: Issue[];
+}
+
+export interface GitHubCommits extends GitHubNav {
+  commitGroups: CommitGroup[];
 }
 
 async function fetchGitHubPage(path: string): Promise<string> {
@@ -348,5 +373,33 @@ export async function getGitHubIssues(owner: string, repo: string): Promise<GitH
       name: repo,
     },
     issues,
+  };
+}
+
+export async function getGitHubCommits(
+  owner: string,
+  repo: string,
+  branch: string,
+  path: string,
+): Promise<GitHubCommits> {
+  const urlPath = path
+    ? `${owner}/${repo}/commits/${branch}/${path}`
+    : `${owner}/${repo}/commits/${branch}`;
+  const html = await fetchGitHubPage(urlPath);
+
+  const payload = parsePayload(html, "react-app.embeddedData", ["payload"]);
+
+  if (payload?.commitGroups === undefined) {
+    throw new Error("Could not find commit history in embedded JSON");
+  }
+
+  return {
+    repo: {
+      owner,
+      name: repo,
+    },
+    branch,
+    path,
+    commitGroups: payload.commitGroups,
   };
 }
