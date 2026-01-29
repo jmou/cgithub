@@ -137,12 +137,23 @@ footer {
   border: 1px solid var(--border-color);
 }
 
-.description {
-  margin-bottom: .2rem;
-}
+.repo-info {
+  .description {
+    margin-bottom: .2rem;
+  }
 
-.count + .count {
-  margin-left: 1rem;
+  .detail {
+    white-space: nowrap;
+  }
+
+  div.detail {
+    overflow-x: hidden;
+    text-overflow: ellipsis;
+  }
+
+  span.detail + span.detail {
+    margin-left: 1rem;
+  }
 }
 
 pre.box {

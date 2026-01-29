@@ -1,24 +1,24 @@
 <% layout("./layout.eta") %>
 
 <% if (it.info) { %>
-  <div class="box">
+  <div class="box repo-info">
     <% if (it.info.description) { %>
       <div class="description"><%= it.info.description %></div>
     <% } %>
     <% if (it.info.website) { %>
-      <div><img src="/static/icons/link.svg" alt="" class="icon"> <a href="<%= it.info.website %>" rel="noopener noreferrer"><%= it.info.website %></a></div>
+      <div class="detail"><img src="/static/icons/link.svg" alt="" class="icon"> <a href="<%= it.info.website %>" rel="noopener noreferrer"><%= it.info.website %></a></div>
     <% } %>
     <% if (it.info.stars) { %>
-      <span class="count"><img src="/static/icons/star.svg" alt="stars" class="icon"> <%= it.info.stars %></span>
+      <span class="detail"><img src="/static/icons/star.svg" alt="stars" class="icon"> <%= it.info.stars %></span>
     <% } %>
     <% if (it.info.watchers) { %>
-      <span class="count"><img src="/static/icons/eye.svg" alt="watchers" class="icon"> <%= it.info.watchers %></span>
+      <span class="detail"><img src="/static/icons/eye.svg" alt="watchers" class="icon"> <%= it.info.watchers %></span>
     <% } %>
     <% if (it.info.forks) { %>
-      <span class="count"><img src="/static/icons/git-fork.svg" alt="forks" class="icon"> <%= it.info.forks %></span>
+      <span class="detail"><img src="/static/icons/git-fork.svg" alt="forks" class="icon"> <%= it.info.forks %></span>
     <% } %>
     <% if (it.info.numReleases) { %>
-      <div><a href="/<%= it.repo.owner %>/<%= it.repo.name %>/releases"><%= it.info.numReleases %> releases</a></div>
+      <div class="detail"><a href="/<%= it.repo.owner %>/<%= it.repo.name %>/releases"><%= it.info.numReleases %> releases</a></div>
     <% } %>
   </div>
 <% } %>
