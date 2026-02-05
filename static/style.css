@@ -1,5 +1,6 @@
 :root {
   color-scheme: light dark;
+  scrollbar-color: var(--border-color) var(--body-background);
 
   --body-background: light-dark(
     oklch(95% 0.01 250),
@@ -12,7 +13,7 @@
   );
 
   --border-color: light-dark(
-    oklch(85% 0.01 250),
+    oklch(80% 0.01 250),
     oklch(40% 0.01 250)
   );
 
@@ -36,10 +37,15 @@
 }
 
 body {
-  margin: 0 1rem;
+  margin: 1rem;
   font-family: Helvetica, Arial, sans-serif;
   background: var(--body-background);
   color: var(--text-color);
+}
+
+h1, h2, h3, h4, h5, h6,
+p, pre, ul, ol {
+  margin: .5em 0;
 }
 
 a {
@@ -163,8 +169,20 @@ pre.box {
 
 .overview {
   overflow-wrap: break-word;
-  &.box {
-    --box-padding: 1rem;
+
+  /* This is a bit convoluted: we want the effect of padding but using margins
+   * vertically so we get margin collapsing. */
+  --box-padding: 1rem;
+  padding-top: 0;
+  padding-bottom: 0;
+  > header:first-child {
+    margin-top: 0;
+  }
+  > :first-child, > header:first-child + * {
+    margin-top: 1rem;
+  }
+  > :last-child {
+    margin-bottom: 1rem;
   }
 
   a {
@@ -179,8 +197,13 @@ pre.box {
     max-width: 100%;
   }
 
-  code {
+  code, pre {
     background: var(--shade-background);
+  }
+
+  pre {
+    overflow-x: auto;
+    scrollbar-color: var(--border-color) var(--shade-background);
   }
 }
 
