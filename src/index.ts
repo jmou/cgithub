@@ -9,6 +9,7 @@ import {
   getGitHubBlob,
   getGitHubCommits,
   getGitHubIssues,
+  getGitHubReleases,
   getGitHubRepo,
   getGitHubTree,
   GitHubHTTPError,
@@ -71,6 +72,11 @@ app.get("/:owner/:repo/issues", async (c) => {
 app.get("/:owner/:repo/commits/:branch/:path{.*}?", async (c) => {
   const { owner, repo, branch, path = "" } = c.req.param();
   return tryRender(c, "commits.eta", getGitHubCommits(owner, repo, branch, path));
+});
+
+app.get("/:owner/:repo/releases", async (c) => {
+  const { owner, repo } = c.req.param();
+  return tryRender(c, "releases.eta", getGitHubReleases(owner, repo));
 });
 
 app.all("*", async (c) => {

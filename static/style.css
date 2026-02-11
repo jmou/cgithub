@@ -232,6 +232,48 @@ pre.box {
   font-size: 0.8rem;
 }
 
+.release {
+  margin-bottom: 2rem;
+}
+
+.release-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 1rem;
+  padding-bottom: .5rem;
+  border-bottom: 1px solid var(--border-color);
+
+  h3 {
+    margin: 0;
+  }
+}
+
+.release-body {
+  overflow-wrap: break-word;
+
+  a {
+    text-decoration: underline;
+  }
+
+  h1, h2 {
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  code, pre {
+    background: var(--shade-background);
+  }
+
+  pre {
+    overflow-x: auto;
+    scrollbar-color: var(--border-color) var(--shade-background);
+  }
+}
+
 /* TODO Strip permalinks? */
 svg.octicon-link {
   display: none;

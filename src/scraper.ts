@@ -184,6 +184,17 @@ export interface GitHubCommits extends GitHubNav {
   commitGroups: CommitGroup[];
 }
 
+interface Release {
+  tagName: string;
+  title: string;
+  publishedAt: string;
+  bodyHtml: string;
+}
+
+export interface GitHubReleases extends GitHubCommon {
+  releases: Release[];
+}
+
 async function fetchGitHubPage(path: string): Promise<string> {
   // GitHub throttles/blocks requests without realistic browser headers.
   // These headers make the request appear as a standard browser visit.
@@ -401,5 +412,57 @@ export async function getGitHubCommits(
     branch,
     path,
     commitGroups: payload.commitGroups,
+  };
+}
+
+export async function getGitHubReleases(owner: string, repo: string): Promise<GitHubReleases> {
+  const html = await fetchGitHubPage(`${owner}/${repo}/releases`);
+
+  // Releases page doesn't have embedded JSON, so we parse HTML directly
+  const releases: Release[] = [];
+
+  // Find all h2 tags with version numbers
+  const h2Regex = /<h2[^>]*id="([^"]*)"[^>]*>(v[^<]*)<\/h2>/g;
+
+  for (const h2Match of html.matchAll(h2Regex)) {
+    const id = h2Match[1];
+    const title = h2Match[2].trim();
+
+    // Find the section containing this h2
+    const sectionRegex = new RegExp(
+      `<section[^>]*>\\s*<h2[^>]*id="${id}"[^>]*>[^<]*<\\/h2>([\\s\\S]*?)<\\/section>`,
+      "s",
+    );
+    const sectionMatch = html.match(sectionRegex);
+    if (!sectionMatch) continue;
+
+    const sectionHtml = sectionMatch[1];
+
+    // Extract tag name from link
+    const tagMatch = sectionHtml.match(/<a[^>]*href="[^"]*\/tree\/([^"]+)"[^>]*>/);
+    const tagName = tagMatch?.[1] || title;
+
+    // Extract published date
+    const dateMatch = sectionHtml.match(/<relative-time[^>]*datetime="([^"]*)"[^>]*>/);
+    const publishedAt = dateMatch?.[1] || "";
+
+    // Extract body HTML (markdown content)
+    const bodyMatch = sectionHtml.match(/<div[^>]*class="[^"]*markdown-body[^"]*"[^>]*>([\s\S]*?)<\/div>/);
+    const bodyHtml = bodyMatch?.[1]?.trim() || "";
+
+    releases.push({
+      tagName,
+      title,
+      publishedAt,
+      bodyHtml,
+    });
+  }
+
+  return {
+    repo: {
+      owner,
+      name: repo,
+    },
+    releases,
   };
 }

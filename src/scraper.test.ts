@@ -4,6 +4,7 @@ import {
   getGitHubBlob,
   getGitHubCommits,
   getGitHubIssues,
+  getGitHubReleases,
   getGitHubRepo,
   getGitHubTree,
   GitHubHTTPError,
@@ -158,6 +159,19 @@ describe("GitHub scraper", () => {
       assert.strictEqual(data.path, "src");
 
       assert.ok(data.commitGroups.length > 0);
+    });
+
+    it("should fetch releases", async () => {
+      const data = await getGitHubReleases("actions", "deploy-pages");
+
+      assert.strictEqual(data.repo.owner, "actions");
+      assert.strictEqual(data.repo.name, "deploy-pages");
+
+      assert.ok(data.releases.length > 0);
+      const firstRelease = data.releases[0];
+      assert.ok(firstRelease.tagName.length > 0);
+      assert.ok(firstRelease.title.match(/^v\d/));
+      assert.ok(firstRelease.publishedAt.length > 0);
     });
   });
 
