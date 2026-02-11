@@ -232,6 +232,10 @@ pre.box {
   font-size: 0.8rem;
 }
 
+.release-nav {
+  margin-bottom: 1rem;
+}
+
 .release {
   margin-bottom: 2rem;
 }

@@ -4,6 +4,7 @@ import {
   getGitHubBlob,
   getGitHubCommits,
   getGitHubIssues,
+  getGitHubRelease,
   getGitHubReleases,
   getGitHubRepo,
   getGitHubTree,
@@ -173,6 +174,18 @@ describe("GitHub scraper", () => {
       assert.ok(firstRelease.title.match(/^v\d/));
       assert.ok(firstRelease.publishedAt.length > 0);
       assert.ok(firstRelease.bodyHtml.length > 0);
+    });
+
+    it("should fetch single release", async () => {
+      const data = await getGitHubRelease("actions", "deploy-pages", "v4.0.5");
+
+      assert.strictEqual(data.repo.owner, "actions");
+      assert.strictEqual(data.repo.name, "deploy-pages");
+
+      assert.ok(data.release.tagName.length > 0);
+      assert.ok(data.release.title.length > 0);
+      assert.ok(data.release.publishedAt.length > 0);
+      assert.ok(data.release.bodyHtml.length > 0);
     });
   });
 

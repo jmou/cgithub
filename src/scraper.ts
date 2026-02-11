@@ -200,6 +200,10 @@ export interface GitHubReleases extends GitHubCommon {
   releases: Release[];
 }
 
+export interface GitHubRelease extends GitHubCommon {
+  release: Release;
+}
+
 async function fetchGitHubPage(path: string): Promise<string> {
   // GitHub throttles/blocks requests without realistic browser headers.
   // These headers make the request appear as a standard browser visit.
@@ -420,6 +424,33 @@ export async function getGitHubCommits(
   };
 }
 
+function parseRelease(section: Element, title: string): Release {
+  // Extract tag name from link
+  const tagLink = cssSelect.selectOne('a[href*="/tree/"]', section);
+  let tagName = title;
+  if (tagLink) {
+    const href = getAttributeValue(tagLink, "href");
+    if (href) {
+      tagName = href.split("/").pop() || title;
+    }
+  }
+
+  // Extract published date
+  const relativeTime = cssSelect.selectOne("relative-time", section);
+  const publishedAt = relativeTime ? getAttributeValue(relativeTime, "datetime") || "" : "";
+
+  // Extract body HTML (markdown content)
+  const body = cssSelect.selectOne(".markdown-body", section);
+  const bodyHtml = body ? getInnerHTML(body).trim() : "";
+
+  return {
+    tagName,
+    title,
+    publishedAt,
+    bodyHtml,
+  };
+}
+
 export async function getGitHubReleases(owner: string, repo: string): Promise<GitHubReleases> {
   const html = await fetchGitHubPage(`${owner}/${repo}/releases`);
 
@@ -436,30 +467,7 @@ export async function getGitHubReleases(owner: string, repo: string): Promise<Gi
     const title = textContent(h2).trim();
     if (!title.startsWith("v")) continue;
 
-    // Extract tag name from link
-    const tagLink = cssSelect.selectOne('a[href*="/tree/"]', section);
-    let tagName = title;
-    if (tagLink) {
-      const href = getAttributeValue(tagLink, "href");
-      if (href) {
-        tagName = href.split("/").pop() || title;
-      }
-    }
-
-    // Extract published date
-    const relativeTime = cssSelect.selectOne("relative-time", section);
-    const publishedAt = relativeTime ? getAttributeValue(relativeTime, "datetime") || "" : "";
-
-    // Extract body HTML (markdown content)
-    const body = cssSelect.selectOne(".markdown-body", section);
-    const bodyHtml = body ? getInnerHTML(body).trim() : "";
-
-    releases.push({
-      tagName,
-      title,
-      publishedAt,
-      bodyHtml,
-    });
+    releases.push(parseRelease(section, title));
   }
 
   return {
@@ -468,5 +476,44 @@ export async function getGitHubReleases(owner: string, repo: string): Promise<Gi
       name: repo,
     },
     releases,
+  };
+}
+
+export async function getGitHubRelease(
+  owner: string,
+  repo: string,
+  tag: string,
+): Promise<GitHubRelease> {
+  const html = await fetchGitHubPage(`${owner}/${repo}/releases/tag/${tag}`);
+
+  // Find the h1 tag with the release title
+  const h1Match = html.match(/<h1[^>]*class="[^"]*d-inline[^"]*"[^>]*>([^<]*)<\/h1>/);
+  const title = h1Match?.[1]?.trim() || tag;
+
+  // Extract tag name from tree link
+  const tagLinkMatch = html.match(/<a[^>]*href="[^"]*\/tree\/([^"]+)"[^>]*>/);
+  const tagName = tagLinkMatch?.[1] || tag;
+
+  // Extract published date
+  const dateMatch = html.match(/<relative-time[^>]*datetime="([^"]*)"[^>]*>/);
+  const publishedAt = dateMatch?.[1] || "";
+
+  // Extract body HTML (markdown content) - find the markdown-body div
+  const bodyMatch = html.match(
+    /<div[^>]*class="[^"]*markdown-body[^"]*"[^>]*>([\s\S]*?)<\/div>\s*<div[^>]*class="mb-3"/,
+  );
+  const bodyHtml = bodyMatch?.[1]?.trim() || "";
+
+  return {
+    repo: {
+      owner,
+      name: repo,
+    },
+    release: {
+      tagName,
+      title,
+      publishedAt,
+      bodyHtml,
+    },
   };
 }

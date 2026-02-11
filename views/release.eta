@@ -1,0 +1,7 @@
+<% layout("./layout.eta") %>
+
+<div class="release-nav">
+  <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/releases">← All releases</a>
+</div>
+
+<%~ include("./_release.eta", { repo: it.repo, release: it.release, linkToDetail: false }) %>

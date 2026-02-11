@@ -3,23 +3,5 @@
 <h2>Releases</h2>
 
 <% for (const release of it.releases) { %>
-  <div class="box release">
-    <div class="release-header">
-      <h3>
-        <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/releases/tag/<%= release.tagName %>">
-          <%= release.title %>
-        </a>
-      </h3>
-      <% if (release.publishedAt) { %>
-        <time class="timestamp" title="<%= release.publishedAt %>">
-          <%= release.publishedAt.split("T")[0] %>
-        </time>
-      <% } %>
-    </div>
-    <% if (release.bodyHtml) { %>
-      <div class="release-body">
-        <%~ release.bodyHtml %>
-      </div>
-    <% } %>
-  </div>
+  <%~ include("./_release.eta", { repo: it.repo, release, linkToDetail: true }) %>
 <% } %>
