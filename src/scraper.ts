@@ -157,6 +157,8 @@ export interface RepoInfo {
   watchers: string | null;
   forks: string | null;
   numReleases?: number;
+  latestReleaseTag?: string;
+  latestReleaseDate?: string;
 }
 
 export interface GitHubRepo extends GitHubTree {
@@ -282,9 +284,29 @@ function parseRepoInfo(html: string): RepoInfo {
     document,
   ) as unknown as Element;
   let numReleases: number | undefined;
+  let latestReleaseTag: string | undefined;
+  let latestReleaseDate: string | undefined;
+
   if (releaseElem) {
     const releaseText = getAttributeValue(releaseElem, "title") || textContent(releaseElem);
     numReleases = parseInt(releaseText.replace(/,/g, ""), 10);
+
+    // Find the latest release tag and date if available
+    const cell = (releaseElem.parent as Element)?.parent?.parent as Element; // span -> a -> h2 -> cell
+    if (cell) {
+      const latestLink = cssSelect.selectOne("a[href*='/releases/tag/']", cell) as Element;
+      if (latestLink) {
+        const tagElem = cssSelect.selectOne(".css-truncate-target", latestLink);
+        if (tagElem) {
+          latestReleaseTag = textContent(tagElem).trim();
+        }
+
+        const timeElem = cssSelect.selectOne("relative-time", latestLink);
+        if (timeElem) {
+          latestReleaseDate = getAttributeValue(timeElem, "datetime") || undefined;
+        }
+      }
+    }
   }
 
   return {
@@ -294,6 +316,8 @@ function parseRepoInfo(html: string): RepoInfo {
     watchers,
     forks,
     numReleases,
+    latestReleaseTag,
+    latestReleaseDate,
   };
 }
 

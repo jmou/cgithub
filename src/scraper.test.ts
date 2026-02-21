@@ -30,6 +30,8 @@ describe("GitHub scraper", () => {
       assert.strictEqual(data.info.watchers?.length, 2);
       assert.strictEqual(data.info.forks?.length, 3);
       assert.strictEqual(data.info.numReleases, 36);
+      assert.strictEqual(data.info.latestReleaseTag, "v4.0.5");
+      assert.ok(data.info.latestReleaseDate?.startsWith("2024-03-18"));
 
       assert.ok(data.items.length > 0);
       assert.ok(Object.keys(data.overviewHtml ?? {}).includes("README.md"));
