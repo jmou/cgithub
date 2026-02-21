@@ -167,7 +167,7 @@ pre.box {
   width: fit-content;
 }
 
-.overview {
+.overview, .release {
   overflow-wrap: break-word;
 
   /* This is a bit convoluted: we want the effect of padding but using margins
@@ -193,7 +193,7 @@ pre.box {
     border-bottom: 1px solid var(--border-color);
   }
 
-  img {
+  img, video {
     max-width: 100%;
   }
 
@@ -204,6 +204,14 @@ pre.box {
   pre {
     overflow-x: auto;
     scrollbar-color: var(--border-color) var(--shade-background);
+  }
+}
+
+.release > header {
+  display: flex;
+  align-items: baseline;
+  > :first-child {
+    flex-grow: 1;
   }
 }
 
@@ -230,52 +238,6 @@ pre.box {
 .commit-sha {
   align-self: center;
   font-size: 0.8rem;
-}
-
-.release-nav {
-  margin-bottom: 1rem;
-}
-
-.release {
-  margin-bottom: 2rem;
-}
-
-.release-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  margin-bottom: 1rem;
-  padding-bottom: .5rem;
-  border-bottom: 1px solid var(--border-color);
-
-  h3 {
-    margin: 0;
-  }
-}
-
-.release-body {
-  overflow-wrap: break-word;
-
-  a {
-    text-decoration: underline;
-  }
-
-  h1, h2 {
-    border-bottom: 1px solid var(--border-color);
-  }
-
-  img {
-    max-width: 100%;
-  }
-
-  code, pre {
-    background: var(--shade-background);
-  }
-
-  pre {
-    overflow-x: auto;
-    scrollbar-color: var(--border-color) var(--shade-background);
-  }
 }
 
 /* TODO Strip permalinks? */

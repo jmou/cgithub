@@ -1,23 +1,19 @@
 <div class="box release">
-  <div class="release-header">
-    <h3>
-      <% if (it.linkToDetail) { %>
-        <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/releases/tag/<%= it.release.tagName %>">
-          <%= it.release.title %>
-        </a>
-      <% } else { %>
+  <header>
+    <% if (it.linkToDetail) { %>
+      <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/releases/tag/<%= it.release.tagName %>">
         <%= it.release.title %>
-      <% } %>
-    </h3>
+      </a>
+    <% } else { %>
+      <span><%= it.release.title %></span>
+    <% } %>
     <% if (it.release.publishedAt) { %>
       <time class="timestamp" title="<%= it.release.publishedAt %>">
         <%= it.release.publishedAt.split("T")[0] %>
       </time>
     <% } %>
-  </div>
+  </header>
   <% if (it.release.bodyHtml) { %>
-    <div class="release-body">
-      <%~ it.release.bodyHtml %>
-    </div>
+    <%~ it.release.bodyHtml %>
   <% } %>
 </div>

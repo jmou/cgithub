@@ -16,6 +16,7 @@ git clone git@github.com:<%= it.repo.owner %>/<%= it.repo.name %>.git</code></pr
       <% if (it.branch) { %>
         <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/commits/<%= it.branch %><%= it.path && it.path !== '/' ? '/' + it.path : '' %>">Commits</a>
       <% } %>
+      <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/releases">Releases</a>
     </nav>
   </div>
 

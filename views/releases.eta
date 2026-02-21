@@ -1,7 +1,5 @@
 <% layout("./layout.eta") %>
 
-<h2>Releases</h2>
-
 <% for (const release of it.releases) { %>
   <%~ include("./_release.eta", { repo: it.repo, release, linkToDetail: true }) %>
 <% } %>
