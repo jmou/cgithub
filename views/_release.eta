@@ -16,4 +16,17 @@
   <% if (it.release.bodyHtml) { %>
     <%~ it.release.bodyHtml %>
   <% } %>
+  <% if (it.release.assets && it.release.assets.length > 0) { %>
+    <footer>
+      <h3>Assets</h3>
+      <% for (const asset of it.release.assets) { %>
+        <div>
+          <a href="<%= asset.url %>"><%= asset.name %></a>
+          <% if (asset.publishedAt) { %>
+            <time class="timestamp" title="<%= asset.publishedAt %>"><%= asset.publishedAt.split("T")[0] %></time>
+          <% } %>
+        </div>
+      <% } %>
+    </footer>
+  <% } %>
 </div>

@@ -196,6 +196,14 @@ interface Release {
   title: string;
   publishedAt: string;
   bodyHtml: string;
+  assets?: ReleaseAsset[];
+}
+
+export interface ReleaseAsset {
+  name: string;
+  url: string;
+  size?: string;
+  publishedAt?: string;
 }
 
 export interface GitHubReleases extends GitHubCommon {
@@ -259,14 +267,14 @@ function parseRepoInfo(html: string): RepoInfo {
       const websiteElem = cssSelect.selectOne(
         "a[rel='noopener noreferrer nofollow']",
         parent,
-      ) as Element;
+      ) as Element | null;
       if (websiteElem) {
         website = getAttributeValue(websiteElem, "href") || null;
       }
     }
   }
 
-  const starsElem = cssSelect.selectOne("#repo-stars-counter-star", document) as unknown as Element;
+  const starsElem = cssSelect.selectOne("#repo-stars-counter-star", document) as Element | null;
   const stars = starsElem
     ? getAttributeValue(starsElem, "title") || textContent(starsElem).trim()
     : null;
@@ -274,7 +282,7 @@ function parseRepoInfo(html: string): RepoInfo {
   const watchersElem = cssSelect.selectOne("a[href$='/watchers'] strong", document);
   const watchers = watchersElem ? textContent(watchersElem).trim() : null;
 
-  const forksElem = cssSelect.selectOne("#repo-network-counter", document) as unknown as Element;
+  const forksElem = cssSelect.selectOne("#repo-network-counter", document) as Element | null;
   const forks = forksElem
     ? getAttributeValue(forksElem, "title") || textContent(forksElem).trim()
     : null;
@@ -282,7 +290,7 @@ function parseRepoInfo(html: string): RepoInfo {
   const releaseElem = cssSelect.selectOne(
     "a[href$='/releases'] .Counter",
     document,
-  ) as unknown as Element;
+  ) as Element | null;
   let numReleases: number | undefined;
   let latestReleaseTag: string | undefined;
   let latestReleaseDate: string | undefined;
@@ -520,7 +528,6 @@ export async function getGitHubReleases(owner: string, repo: string): Promise<Gi
     if (!h2) continue;
 
     const title = textContent(h2).trim();
-    if (!title.startsWith("v")) continue;
 
     releases.push(parseRelease(section, title));
   }
@@ -534,41 +541,82 @@ export async function getGitHubReleases(owner: string, repo: string): Promise<Gi
   };
 }
 
-export async function getGitHubRelease(
+export async function getGitHubReleaseBase(
   owner: string,
   repo: string,
   tag: string,
 ): Promise<GitHubRelease> {
   const html = await fetchGitHubPage(`${owner}/${repo}/releases/tag/${tag}`);
 
-  // Find the h1 tag with the release title
-  const h1Match = html.match(/<h1[^>]*class="[^"]*d-inline[^"]*"[^>]*>([^<]*)<\/h1>/);
-  const title = h1Match?.[1]?.trim() || tag;
+  const document = parseDocument(html);
 
-  // Extract tag name from tree link
-  const tagLinkMatch = html.match(/<a[^>]*href="[^"]*\/tree\/([^"]+)"[^>]*>/);
-  const tagName = tagLinkMatch?.[1] || tag;
+  const box = cssSelect.selectOne(".Box:has(h1)", document) as Element | null;
+  if (!box) throw new Error("Could not find release box");
 
-  // Extract published date
-  const dateMatch = html.match(/<relative-time[^>]*datetime="([^"]*)"[^>]*>/);
-  const publishedAt = dateMatch?.[1] || "";
+  const h1 = cssSelect.selectOne("h1", box);
+  const title = h1 ? textContent(h1).trim() : "";
 
-  // Extract body HTML (markdown content) - find the markdown-body div
-  const bodyMatch = html.match(
-    /<div[^>]*class="[^"]*markdown-body[^"]*"[^>]*>([\s\S]*?)<\/div>\s*<div[^>]*class="mb-3"/,
-  );
-  const bodyHtml = bodyMatch?.[1]?.trim() || "";
+  const release = parseRelease(box, title);
 
   return {
     repo: {
       owner,
       name: repo,
     },
-    release: {
-      tagName,
-      title,
-      publishedAt,
-      bodyHtml,
-    },
+    release,
   };
+}
+
+export async function getGitHubReleaseAssets(
+  owner: string,
+  repo: string,
+  tag: string,
+): Promise<ReleaseAsset[]> {
+  const html = await fetchGitHubPage(`${owner}/${repo}/releases/expanded_assets/${tag}`);
+  const document = parseDocument(html);
+  const assets: ReleaseAsset[] = [];
+
+  for (const row of cssSelect.selectAll("li", document) as unknown as Element[]) {
+    const link = cssSelect.selectOne("a[href]", row);
+    if (!link) continue;
+
+    const url = getAttributeValue(link, "href") || "";
+    // Filename is in the link, often split into multiple spans
+    const name = textContent(link).replace(/\s+/g, " ").trim();
+
+    let size: string | undefined;
+    let publishedAt: string | undefined;
+    for (const s of cssSelect.selectAll("span.color-fg-muted.text-right", row)) {
+      // Size is in a span with color-fg-muted and text-right, but avoid the one with relative-time
+      const timeElem = cssSelect.selectOne("relative-time", row);
+      if (timeElem) {
+        publishedAt = timeElem ? getAttributeValue(timeElem, "datetime") || "" : "";
+      } else {
+        const text = textContent(s).trim();
+        if (text) size = text;
+      }
+    }
+
+    assets.push({
+      name,
+      url: url.startsWith("/") ? `https://github.com${url}` : url,
+      size,
+      publishedAt,
+    });
+  }
+
+  return assets;
+}
+
+export async function getGitHubRelease(
+  owner: string,
+  repo: string,
+  tag: string,
+): Promise<GitHubRelease> {
+  const [base, assets] = await Promise.all([
+    getGitHubReleaseBase(owner, repo, tag),
+    getGitHubReleaseAssets(owner, repo, tag),
+  ]);
+  base.release.assets = assets;
+  return base;
 }

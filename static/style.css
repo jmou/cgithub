@@ -111,11 +111,16 @@ section {
     margin-bottom: 0;
     padding: .5rem;
     border-bottom: 1px solid var(--border-color);
-    font-weight: bold;
+  }
+
+  > footer:last-child {
+    margin: 0 calc(-1 * var(--box-padding));
+    padding: .5rem;
+    border-top: 1px solid var(--border-color);
   }
 }
 
-footer {
+body > footer {
   margin-top: 1rem;
   text-align: center;
 }
@@ -207,11 +212,16 @@ pre.box {
   }
 }
 
+.overview > header {
+  font-weight: bold;
+}
+
 .release > header {
   display: flex;
   align-items: baseline;
   > :first-child {
     flex-grow: 1;
+    font-weight: bold;
   }
 }
 

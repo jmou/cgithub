@@ -188,6 +188,12 @@ describe("GitHub scraper", () => {
       assert.ok(data.release.title.length > 0);
       assert.ok(data.release.publishedAt.length > 0);
       assert.ok(data.release.bodyHtml.length > 0);
+      assert.ok(data.release.assets && data.release.assets.length >= 2);
+      assert.strictEqual(data.release.assets[0].name, "Source code (zip)");
+      assert.strictEqual(
+        data.release.assets[0].url,
+        "https://github.com/actions/deploy-pages/archive/refs/tags/v4.0.5.zip",
+      );
     });
   });
 
