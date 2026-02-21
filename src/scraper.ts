@@ -1,3 +1,8 @@
+import { parseDocument } from "htmlparser2";
+import { type Element } from "domhandler";
+import { getAttributeValue, getInnerHTML, textContent } from "domutils";
+import * as cssSelect from "css-select";
+
 export class GitHubHTTPError extends Error {
   status: number;
 
@@ -418,37 +423,36 @@ export async function getGitHubCommits(
 export async function getGitHubReleases(owner: string, repo: string): Promise<GitHubReleases> {
   const html = await fetchGitHubPage(`${owner}/${repo}/releases`);
 
-  // Releases page doesn't have embedded JSON, so we parse HTML directly
+  const document = parseDocument(html);
   const releases: Release[] = [];
 
-  // Find all h2 tags with version numbers
-  const h2Regex = /<h2[^>]*id="([^"]*)"[^>]*>(v[^<]*)<\/h2>/g;
+  // Not really sure the right way to express this type.
+  const sections = cssSelect.selectAll("section", document) as unknown as Element[];
 
-  for (const h2Match of html.matchAll(h2Regex)) {
-    const id = h2Match[1];
-    const title = h2Match[2].trim();
+  for (const section of sections) {
+    const h2 = cssSelect.selectOne("h2[id]", section);
+    if (!h2) continue;
 
-    // Find the section containing this h2
-    const sectionRegex = new RegExp(
-      `<section[^>]*>\\s*<h2[^>]*id="${id}"[^>]*>[^<]*<\\/h2>([\\s\\S]*?)<\\/section>`,
-      "s",
-    );
-    const sectionMatch = html.match(sectionRegex);
-    if (!sectionMatch) continue;
-
-    const sectionHtml = sectionMatch[1];
+    const title = textContent(h2).trim();
+    if (!title.startsWith("v")) continue;
 
     // Extract tag name from link
-    const tagMatch = sectionHtml.match(/<a[^>]*href="[^"]*\/tree\/([^"]+)"[^>]*>/);
-    const tagName = tagMatch?.[1] || title;
+    const tagLink = cssSelect.selectOne('a[href*="/tree/"]', section);
+    let tagName = title;
+    if (tagLink) {
+      const href = getAttributeValue(tagLink, "href");
+      if (href) {
+        tagName = href.split("/").pop() || title;
+      }
+    }
 
     // Extract published date
-    const dateMatch = sectionHtml.match(/<relative-time[^>]*datetime="([^"]*)"[^>]*>/);
-    const publishedAt = dateMatch?.[1] || "";
+    const relativeTime = cssSelect.selectOne("relative-time", section);
+    const publishedAt = relativeTime ? getAttributeValue(relativeTime, "datetime") || "" : "";
 
     // Extract body HTML (markdown content)
-    const bodyMatch = sectionHtml.match(/<div[^>]*class="[^"]*markdown-body[^"]*"[^>]*>([\s\S]*?)<\/div>/);
-    const bodyHtml = bodyMatch?.[1]?.trim() || "";
+    const body = cssSelect.selectOne(".markdown-body", section);
+    const bodyHtml = body ? getInnerHTML(body).trim() : "";
 
     releases.push({
       tagName,

@@ -172,6 +172,7 @@ describe("GitHub scraper", () => {
       assert.ok(firstRelease.tagName.length > 0);
       assert.ok(firstRelease.title.match(/^v\d/));
       assert.ok(firstRelease.publishedAt.length > 0);
+      assert.ok(firstRelease.bodyHtml.length > 0);
     });
   });
 
