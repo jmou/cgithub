@@ -241,27 +241,58 @@ function parsePayload(html: string, dataTarget: string, prop: string[]): RawPayl
 }
 
 function parseRepoInfo(html: string): RepoInfo {
-  const descMatch = html.match(/<p[^>]*class="[^"]*f4[^"]*"[^>]*>([\s\S]*?)<\/p>/);
-  const description = descMatch?.[1]?.replace(/<[^>]+>/g, "").trim() || null;
-  const websiteMatch = html.match(/<a[^>]*rel="noopener noreferrer nofollow"[^>]*href="([^"]+)"/);
-  const starsMatch = html.match(/id="repo-stars-counter-star"[^>]*>([^<]+)/);
-  const watchersMatch = html.match(/<strong>(\d+)<\/strong>\s*watching/);
-  const forksMatch = html.match(/id="repo-network-counter"[^>]*>([^<]+)/);
+  const document = parseDocument(html);
 
+  const aboutSection = cssSelect.selectOne(".BorderGrid-cell h2:contains('About')", document);
+  let description: string | null = null;
+  let website: string | null = null;
+
+  if (aboutSection) {
+    const parent = aboutSection.parent;
+    if (parent) {
+      const descElem = cssSelect.selectOne("p.f4", parent);
+      if (descElem) {
+        description = textContent(descElem).trim();
+      }
+      const websiteElem = cssSelect.selectOne(
+        "a[rel='noopener noreferrer nofollow']",
+        parent,
+      ) as Element;
+      if (websiteElem) {
+        website = getAttributeValue(websiteElem, "href") || null;
+      }
+    }
+  }
+
+  const starsElem = cssSelect.selectOne("#repo-stars-counter-star", document) as unknown as Element;
+  const stars = starsElem
+    ? getAttributeValue(starsElem, "title") || textContent(starsElem).trim()
+    : null;
+
+  const watchersElem = cssSelect.selectOne("a[href$='/watchers'] strong", document);
+  const watchers = watchersElem ? textContent(watchersElem).trim() : null;
+
+  const forksElem = cssSelect.selectOne("#repo-network-counter", document) as unknown as Element;
+  const forks = forksElem
+    ? getAttributeValue(forksElem, "title") || textContent(forksElem).trim()
+    : null;
+
+  const releaseElem = cssSelect.selectOne(
+    "a[href$='/releases'] .Counter",
+    document,
+  ) as unknown as Element;
   let numReleases: number | undefined;
-  const releaseCountMatch = html.match(
-    /<a[^>]*href="[^"]*\/releases"[^>]*>[\s\S]*?<span[^>]*title="(\d+)"[^>]*(?:class="[^"]*Counter|data-view-component="true")[^>]*>/,
-  );
-  if (releaseCountMatch) {
-    numReleases = parseInt(releaseCountMatch[1], 10);
+  if (releaseElem) {
+    const releaseText = getAttributeValue(releaseElem, "title") || textContent(releaseElem);
+    numReleases = parseInt(releaseText.replace(/,/g, ""), 10);
   }
 
   return {
     description,
-    website: websiteMatch?.[1] || null,
-    stars: starsMatch?.[1]?.trim() || null,
-    watchers: watchersMatch?.[1] || null,
-    forks: forksMatch?.[1]?.trim() || null,
+    website,
+    stars,
+    watchers,
+    forks,
     numReleases,
   };
 }
