@@ -95,8 +95,11 @@ describe("GitHub scraper", () => {
       assert.strictEqual(data.language, "Markdown");
       assert.strictEqual(data.image, false);
 
-      assert.strictEqual(data.textLines, null);
-      assert.strictEqual(data.htmlLines, null);
+      assert.strictEqual(data.textLines?.[0], "# deploy-pages 🚀");
+      assert.strictEqual(
+        data.htmlLines?.[0],
+        '<span class="pl-mh"># deploy-pages 🚀</span>deploy-pages 🚀<span class="pl-en">deploy-pages 🚀</span>',
+      );
       const firstLine =
         /^<article class="markdown-body entry-content container-lg" itemprop="text"><div class="markdown-heading" dir="auto"><h1 tabindex="-1" class="heading-element" dir="auto">deploy-pages 🚀<\/h1>/;
       assert.match(data.htmlContent ?? "", firstLine);

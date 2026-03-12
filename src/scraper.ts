@@ -22,7 +22,6 @@ interface TreeItem {
 interface OverviewFile {
   displayName: string;
   richText?: string;
-  loaded: boolean;
 }
 
 interface IssueNode {
@@ -79,34 +78,65 @@ export interface CommitGroup {
   commits: Commit[];
 }
 
-interface RawPayload {
+interface CodeViewLayoutRoute {
   repo: {
     ownerLogin: string;
     name: string;
   };
-  refInfo: { name: string };
-  path: string;
-  tree?: {
-    items: TreeItem[];
+  refInfo: {
+    name: string;
   };
-  blob?: {
-    headerInfo: {
-      blobSize: string;
-      lineInfo: {
-        truncatedLoc: string | null;
-        truncatedSloc: string | null;
-      };
-    };
-    language: string | null;
-    image: boolean;
-    rawLines: string[] | null;
-    colorizedLines: string[] | null;
-    richText: string | null;
-    stylingDirectives: StylingDirective[][] | null;
+  path: string;
+}
+
+interface CodeViewRepoRoute {
+  tree: {
+    items: TreeItem[];
   };
   overview?: {
     overviewFiles?: OverviewFile[];
   };
+}
+
+interface CodeViewTreeRoute {
+  tree: {
+    items: TreeItem[];
+  };
+}
+
+interface BlobHeaderInfo {
+  blobSize: string;
+  lineInfo?: {
+    truncatedLoc: string | null;
+    truncatedSloc: string | null;
+  };
+}
+
+interface CodeViewBlobLayoutRoute {
+  blob: {
+    headerInfo: BlobHeaderInfo;
+    language: string | null;
+    image: boolean;
+  };
+}
+
+interface CodeViewBlobLayoutRouteStyledBlob {
+  rawLines: string[] | null;
+  colorizedLines: string[] | null;
+  stylingDirectives: StylingDirective[][] | null;
+}
+
+interface CodeViewBlobRoute {
+  richText: string | null;
+}
+
+interface AppPayload {
+  codeViewLayoutRoute?: CodeViewLayoutRoute;
+  codeViewRepoRoute?: CodeViewRepoRoute;
+  codeViewTreeRoute?: CodeViewTreeRoute;
+  codeViewBlobLayoutRoute?: CodeViewBlobLayoutRoute;
+  "codeViewBlobLayoutRoute.StyledBlob"?: CodeViewBlobLayoutRouteStyledBlob;
+  codeViewBlobRoute?: CodeViewBlobRoute;
   commitGroups?: CommitGroup[];
   // Actually there may be other query types.
   preloadedQueries?: IssueIndexPageQuery[];
@@ -228,9 +258,9 @@ async function fetchGitHubPage(path: string): Promise<string> {
   return response.text();
 }
 
-function parsePayload(html: string, dataTarget: string, prop: string[]): RawPayload | null {
+function parsePayload(html: string): AppPayload | null {
   const regex = new RegExp(
-    `<script type="application/json" data-target="${dataTarget}">([^<]+)</script>`,
+    `<script type="application/json" data-target="react-app.embeddedData">([^<]+)</script>`,
     "g",
   );
 
@@ -241,11 +271,8 @@ function parsePayload(html: string, dataTarget: string, prop: string[]): RawPayl
     } catch {
       continue;
     }
-    for (const key of prop) {
-      data = data[key];
-      if (data === undefined) continue match;
-    }
-    return data;
+    if (data.payload === undefined) continue match;
+    return data.payload;
   }
   return null;
 }
@@ -329,24 +356,31 @@ function parseRepoInfo(html: string): RepoInfo {
   };
 }
 
-function extractOverviewHtml(payload: RawPayload): Record<string, string> | undefined {
+function extractOverviewHtml(
+  overviewFiles: OverviewFile[] = [],
+): Record<string, string> | undefined {
   const result: Record<string, string> = {};
-  for (const file of payload.overview?.overviewFiles ?? []) {
-    if (file.loaded && file.richText !== undefined) {
+  for (const file of overviewFiles) {
+    if (file.richText !== undefined) {
       result[file.displayName] = file.richText;
     }
   }
   return Object.keys(result).length > 0 ? result : undefined;
 }
 
-function extractGitHub<T>(payload: RawPayload, extra: T): GitHubNav & T {
+function extractGitHub<T>(payload: AppPayload | null, extra: T): GitHubNav & T {
+  const layoutRoute = payload?.codeViewLayoutRoute;
+  if (layoutRoute === undefined) {
+    throw new Error("Missing codeViewLayoutRoute");
+  }
+
   return {
     repo: {
-      owner: payload.repo.ownerLogin,
-      name: payload.repo.name,
+      owner: layoutRoute.repo.ownerLogin,
+      name: layoutRoute.repo.name,
     },
-    branch: payload.refInfo.name,
-    path: payload.path,
+    branch: layoutRoute.refInfo.name,
+    path: layoutRoute.path,
     ...extra,
   };
 }
@@ -354,16 +388,17 @@ function extractGitHub<T>(payload: RawPayload, extra: T): GitHubNav & T {
 export async function getGitHubRepo(owner: string, repo: string): Promise<GitHubRepo> {
   const html = await fetchGitHubPage(`${owner}/${repo}`);
 
-  const payload = parsePayload(html, "react-partial.embeddedData", ["props", "initialPayload"]);
+  const payload = parsePayload(html);
+  const repoRoute = payload?.codeViewRepoRoute;
 
-  if (payload?.tree === undefined) {
+  if (repoRoute?.tree === undefined) {
     throw new Error("Could not find tree data in embedded JSON");
   }
 
   const info = parseRepoInfo(html);
-  const overviewHtml = extractOverviewHtml(payload);
+  const overviewHtml = extractOverviewHtml(repoRoute.overview?.overviewFiles);
 
-  return extractGitHub(payload, { items: payload.tree.items, info, overviewHtml });
+  return extractGitHub(payload, { items: repoRoute.tree.items, info, overviewHtml });
 }
 
 export async function getGitHubTree(
@@ -374,20 +409,14 @@ export async function getGitHubTree(
 ): Promise<GitHubTree> {
   const html = await fetchGitHubPage(`${owner}/${repo}/tree/${branch}/${path}`);
 
-  // GitHub uses different formats for root vs subdirectories.
-  const payload =
-    // Root directory format.
-    parsePayload(html, "react-partial.embeddedData", ["props", "initialPayload"]) ||
-    // Subdirectory format.
-    parsePayload(html, "react-app.embeddedData", ["payload"]);
+  const payload = parsePayload(html);
+  const treeRoute = payload?.codeViewTreeRoute;
 
-  if (payload?.tree === undefined) {
+  if (treeRoute?.tree === undefined) {
     throw new Error("Could not find tree data in embedded JSON");
   }
 
-  const overviewHtml = extractOverviewHtml(payload);
-
-  return extractGitHub(payload, { items: payload.tree.items, overviewHtml });
+  return extractGitHub(payload, { items: treeRoute.tree.items });
 }
 
 export async function getGitHubBlob(
@@ -398,42 +427,42 @@ export async function getGitHubBlob(
 ): Promise<GitHubBlob> {
   const html = await fetchGitHubPage(`${owner}/${repo}/blob/${branch}/${path}`);
 
-  const payload = parsePayload(html, "react-app.embeddedData", ["payload"]);
+  const payload = parsePayload(html);
+  const blob = payload?.codeViewBlobLayoutRoute?.blob;
+  const styledBlob = payload?.["codeViewBlobLayoutRoute.StyledBlob"];
 
-  if (payload?.blob === undefined) {
+  if (blob === undefined) {
     throw new Error("Could not find blob data in embedded JSON");
   }
 
-  const blob = payload.blob;
-  const { headerInfo, stylingDirectives } = blob;
-
-  let htmlLines = blob.colorizedLines;
-  if (!htmlLines && stylingDirectives && blob.rawLines) {
-    htmlLines = blob.rawLines.map((line, i) => applyStyling(line, stylingDirectives[i]));
+  let htmlLines = styledBlob?.colorizedLines ?? null;
+  const stylingDirectives = styledBlob?.stylingDirectives;
+  if (!htmlLines && stylingDirectives && styledBlob?.rawLines) {
+    htmlLines = styledBlob.rawLines.map((line, i) => applyStyling(line, stylingDirectives[i]));
   }
 
-  let size = headerInfo.blobSize;
-  if (headerInfo.lineInfo.truncatedLoc) {
-    size += ` / ${headerInfo.lineInfo.truncatedLoc} lines`;
+  let size = blob.headerInfo.blobSize;
+  if (blob.headerInfo.lineInfo?.truncatedLoc) {
+    size += ` / ${blob.headerInfo.lineInfo.truncatedLoc} lines`;
   }
-  if (headerInfo.lineInfo.truncatedSloc) {
-    size += ` / ${headerInfo.lineInfo.truncatedSloc} loc`;
+  if (blob.headerInfo.lineInfo?.truncatedSloc) {
+    size += ` / ${blob.headerInfo.lineInfo.truncatedSloc} loc`;
   }
 
   return extractGitHub(payload, {
     language: blob.language || null,
     size,
     image: blob.image,
-    textLines: blob.rawLines,
+    textLines: styledBlob?.rawLines ?? null,
     htmlLines,
-    htmlContent: blob.richText,
+    htmlContent: payload?.codeViewBlobRoute?.richText ?? null,
   });
 }
 
 export async function getGitHubIssues(owner: string, repo: string): Promise<GitHubIssues> {
   const html = await fetchGitHubPage(`${owner}/${repo}/issues`);
 
-  const payload = parsePayload(html, "react-app.embeddedData", ["payload"]);
+  const payload = parsePayload(html);
 
   let issuesQuery: IssueIndexPageQuery | undefined;
   for (const query of payload?.preloadedQueries ?? []) {
@@ -470,7 +499,7 @@ export async function getGitHubCommits(
     : `${owner}/${repo}/commits/${branch}`;
   const html = await fetchGitHubPage(urlPath);
 
-  const payload = parsePayload(html, "react-app.embeddedData", ["payload"]);
+  const payload = parsePayload(html);
 
   if (payload?.commitGroups === undefined) {
     throw new Error("Could not find commit history in embedded JSON");
