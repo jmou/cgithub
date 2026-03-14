@@ -38,30 +38,27 @@ describe("GitHub scraper", () => {
     });
 
     it("should fetch tree", async () => {
-      const data = await getGitHubTree("actions", "deploy-pages", "main", "src");
+      const data = await getGitHubTree("github", "rally", "main", "lib");
 
-      assert.strictEqual(data.repo.owner, "actions");
-      assert.strictEqual(data.repo.name, "deploy-pages");
+      assert.strictEqual(data.repo.owner, "github");
+      assert.strictEqual(data.repo.name, "rally");
       assert.strictEqual(data.branch, "main");
-      assert.strictEqual(data.path, "src");
+      assert.strictEqual(data.path, "lib");
 
       assert.deepStrictEqual(data.items, [
         {
-          name: "__tests__",
-          path: "src/__tests__",
-          contentType: "directory",
+          name: "README.md",
+          path: "lib/README.md",
+          contentType: "file",
         },
         {
-          name: "internal",
-          path: "src/internal",
-          contentType: "directory",
-        },
-        {
-          name: "index.js",
-          path: "src/index.js",
+          name: "RallyValidate.js",
+          path: "lib/RallyValidate.js",
           contentType: "file",
         },
       ]);
+
+      assert.ok(Object.keys(data.overviewHtml ?? {}).includes("README.md"));
     });
 
     it("should fetch text blob", async () => {

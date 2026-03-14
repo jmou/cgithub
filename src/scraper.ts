@@ -101,6 +101,7 @@ interface CodeViewRepoRoute {
 interface CodeViewTreeRoute {
   tree: {
     items: TreeItem[];
+    readme?: OverviewFile;
   };
 }
 
@@ -416,7 +417,9 @@ export async function getGitHubTree(
     throw new Error("Could not find tree data in embedded JSON");
   }
 
-  return extractGitHub(payload, { items: treeRoute.tree.items });
+  const overviewHtml = extractOverviewHtml(treeRoute.tree.readme ? [treeRoute.tree.readme] : []);
+
+  return extractGitHub(payload, { items: treeRoute.tree.items, overviewHtml });
 }
 
 export async function getGitHubBlob(
