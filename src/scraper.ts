@@ -153,15 +153,46 @@ function escapeHtml(text: string): string {
     .replace(/'/g, "&#039;");
 }
 
-function applyStyling(line: string, directives: StylingDirective[]): string {
+// Renders directives[i..] within [rangeStart, rangeEnd], producing nested spans.
+// Returns the rendered content and the index of the first directive not consumed.
+function renderRange(
+  line: string,
+  directives: StylingDirective[],
+  i: number,
+  rangeStart: number,
+  rangeEnd: number,
+): [string, number] {
   let result = "";
-  let lastPos = 0;
-  for (const [start, end, className] of directives) {
-    result += escapeHtml(line.substring(lastPos, start));
-    result += `<span class="${className}">${escapeHtml(line.substring(start, end))}</span>`;
-    lastPos = end;
+  let pos = rangeStart;
+
+  while (i < directives.length) {
+    const [start, end, className] = directives[i];
+    // Stop at directives that start outside or extend past this range.
+    if (start >= rangeEnd || end > rangeEnd) break;
+
+    // Combine classes for directives with identical ranges.
+    let classes = className;
+    let j = i + 1;
+    while (j < directives.length && directives[j][0] === start && directives[j][1] === end) {
+      classes += " " + directives[j][2];
+      j++;
+    }
+
+    result += escapeHtml(line.substring(pos, start));
+    const [innerContent, nextI] = renderRange(line, directives, j, start, end);
+    result += `<span class="${classes}">${innerContent}</span>`;
+    pos = end;
+    i = nextI;
   }
-  result += escapeHtml(line.substring(lastPos));
+
+  result += escapeHtml(line.substring(pos, rangeEnd));
+  return [result, i];
+}
+
+function applyStyling(line: string, directives: StylingDirective[]): string {
+  // Sort by start ascending, then end descending so outer spans precede nested ones.
+  const sorted = [...directives].sort((a, b) => (a[0] !== b[0] ? a[0] - b[0] : b[1] - a[1]));
+  const [result] = renderRange(line, sorted, 0, 0, line.length);
   return result;
 }
 

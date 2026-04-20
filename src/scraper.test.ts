@@ -95,7 +95,7 @@ describe("GitHub scraper", () => {
       assert.strictEqual(data.textLines?.[0], "# deploy-pages 🚀");
       assert.strictEqual(
         data.htmlLines?.[0],
-        '<span class="pl-mh"># deploy-pages 🚀</span>deploy-pages 🚀<span class="pl-en">deploy-pages 🚀</span>',
+        '<span class="pl-mh"># <span class="pl-en">deploy-pages 🚀</span></span>',
       );
       const firstLine =
         /^<article class="markdown-body entry-content container-lg" itemprop="text"><div class="markdown-heading" dir="auto"><h1 tabindex="-1" class="heading-element" dir="auto">deploy-pages 🚀<\/h1>/;
@@ -193,6 +193,28 @@ describe("GitHub scraper", () => {
       assert.strictEqual(
         data.release.assets[0].url,
         "https://github.com/actions/deploy-pages/archive/refs/tags/v4.0.5.zip",
+      );
+    });
+  });
+
+  describe("dustinlyons/nixos-config repository", () => {
+    it("should fetch nix blob with combined overlapping styling directives", async () => {
+      const data = await getGitHubBlob("dustinlyons", "nixos-config", "main", "flake.nix");
+
+      assert.strictEqual(data.repo.owner, "dustinlyons");
+      assert.strictEqual(data.repo.name, "nixos-config");
+      assert.strictEqual(data.path, "flake.nix");
+      assert.strictEqual(data.image, false);
+      assert.strictEqual(data.htmlContent, null);
+      assert.ok(data.htmlLines !== null && data.htmlLines.length > 0);
+
+      // Line 2 has directives [2,13,"pl-c1"] and [2,13,"pl-s1"] with identical ranges.
+      // They should be combined into one span, not duplicated.
+      const line2 = data.htmlLines[1];
+      assert.ok(line2.includes('class="pl-c1 pl-s1"'), `expected combined classes in: ${line2}`);
+      assert.ok(
+        (line2.match(/description/g) ?? []).length === 1,
+        `expected "description" to appear once in: ${line2}`,
       );
     });
   });
