@@ -26,7 +26,8 @@ interface OverviewFile {
 
 interface IssueNode {
   number: number;
-  title: string;
+  title?: string;
+  titleHtml?: string;
   author?: {
     login: string;
   };
@@ -478,8 +479,9 @@ export async function getGitHubIssues(owner: string, repo: string): Promise<GitH
   }
 
   const issues: Issue[] = issuesQuery.result.data.repository.search.edges.map((edge) => {
-    const { number, title, state, createdAt } = edge.node;
-    return { number, title, state, createdAt };
+    const { number, title, titleHtml, state, createdAt } = edge.node;
+    const finalTitle = (title || titleHtml || "").replace(/<[^>]+>/g, "");
+    return { number, title: finalTitle, state, createdAt };
   });
 
   return {
