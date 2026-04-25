@@ -9,6 +9,7 @@ import {
   getGitHubRepo,
   getGitHubTree,
   GitHubHTTPError,
+  RedirectError,
 } from "./scraper.ts";
 
 describe("GitHub scraper", () => {
@@ -244,6 +245,31 @@ describe("GitHub scraper", () => {
         assert.strictEqual(err.status, 404);
         return true;
       });
+    });
+
+    it("should redirect when fetching a directory as a blob", async () => {
+      await assert.rejects(
+        getGitHubBlob("badlogic", "pi-mono", "main", "packages/agent"),
+        (err) => {
+          assert(err instanceof RedirectError, "error should be a RedirectError");
+          assert.strictEqual(err.location, "/badlogic/pi-mono/tree/main/packages/agent");
+          return true;
+        },
+      );
+    });
+
+    it("should redirect when fetching a file as a tree", async () => {
+      await assert.rejects(
+        getGitHubTree("badlogic", "pi-mono", "main", "packages/agent/package.json"),
+        (err) => {
+          assert(err instanceof RedirectError, "error should be a RedirectError");
+          assert.strictEqual(
+            err.location,
+            "/badlogic/pi-mono/blob/main/packages/agent/package.json",
+          );
+          return true;
+        },
+      );
     });
   });
 });

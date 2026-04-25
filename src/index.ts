@@ -14,6 +14,7 @@ import {
   getGitHubRepo,
   getGitHubTree,
   GitHubHTTPError,
+  RedirectError,
 } from "./scraper.ts";
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
@@ -32,7 +33,9 @@ async function tryRender<T extends object>(c: Context, template: string, promise
   try {
     data = await promise;
   } catch (e) {
-    if (e instanceof GitHubHTTPError) {
+    if (e instanceof RedirectError) {
+      return c.redirect(e.location);
+    } else if (e instanceof GitHubHTTPError) {
       c.status(e.status as StatusCode);
       const message = `GitHub responded with HTTP ${e.status} ${e.message}`;
       return c.html(await eta.renderAsync("error.eta", { title: e.message, message }));

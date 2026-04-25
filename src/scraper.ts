@@ -13,6 +13,16 @@ export class GitHubHTTPError extends Error {
   }
 }
 
+export class RedirectError extends Error {
+  location: string;
+
+  constructor(location: string) {
+    super(`Redirect to ${location}`);
+    this.name = "RedirectError";
+    this.location = location;
+  }
+}
+
 interface TreeItem {
   contentType: "directory" | "file";
   name: string;
@@ -286,7 +296,16 @@ async function fetchGitHubPage(path: string): Promise<string> {
     Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
     "Accept-Language": "en-US,en;q=0.5",
   };
-  const response = await fetch(`https://github.com/${path}`, { headers });
+  const response = await fetch(`https://github.com/${path}`, { headers, redirect: "manual" });
+  if (response.status === 301 || response.status === 302) {
+    const location = response.headers.get("location");
+    if (location) {
+      const url = new URL(location);
+      if (url.hostname === "github.com") {
+        throw new RedirectError(url.pathname);
+      }
+    }
+  }
   if (!response.ok) throw new GitHubHTTPError(response.status, response.statusText);
   return response.text();
 }
