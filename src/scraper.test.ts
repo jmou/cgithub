@@ -249,10 +249,10 @@ describe("GitHub scraper", () => {
 
     it("should redirect when fetching a directory as a blob", async () => {
       await assert.rejects(
-        getGitHubBlob("badlogic", "pi-mono", "main", "packages/agent"),
+        getGitHubBlob("earendil-works", "pi", "main", "packages/agent"),
         (err) => {
           assert(err instanceof RedirectError, "error should be a RedirectError");
-          assert.strictEqual(err.location, "/badlogic/pi-mono/tree/main/packages/agent");
+          assert.strictEqual(err.location, "/earendil-works/pi/tree/main/packages/agent");
           return true;
         },
       );
@@ -260,12 +260,12 @@ describe("GitHub scraper", () => {
 
     it("should redirect when fetching a file as a tree", async () => {
       await assert.rejects(
-        getGitHubTree("badlogic", "pi-mono", "main", "packages/agent/package.json"),
+        getGitHubTree("earendil-works", "pi", "main", "packages/agent/package.json"),
         (err) => {
           assert(err instanceof RedirectError, "error should be a RedirectError");
           assert.strictEqual(
             err.location,
-            "/badlogic/pi-mono/blob/main/packages/agent/package.json",
+            "/earendil-works/pi/blob/main/packages/agent/package.json",
           );
           return true;
         },
