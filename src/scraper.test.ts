@@ -4,6 +4,7 @@ import {
   getGitHubBlob,
   getGitHubCommits,
   getGitHubIssues,
+  getGitHubPulls,
   getGitHubRelease,
   getGitHubReleases,
   getGitHubRepo,
@@ -148,6 +149,16 @@ describe("GitHub scraper", () => {
       assert.ok(issue417);
       assert.strictEqual(issue417.title, "Chats");
       assert.ok(data.issues.every((issue) => issue.title !== ""));
+    });
+
+    it("should fetch pull requests", async () => {
+      const data = await getGitHubPulls("actions", "deploy-pages", { q: "state:closed" });
+
+      assert.strictEqual(data.repo.owner, "actions");
+      assert.strictEqual(data.repo.name, "deploy-pages");
+      const pr411 = data.pulls.find((pull) => pull.number === 411);
+      assert.ok(pr411);
+      assert.strictEqual(pr411.title, "update node version");
     });
 
     it("should fetch commits", async () => {

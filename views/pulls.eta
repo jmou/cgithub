@@ -1,0 +1,15 @@
+<% layout("./layout"); it.searchType = "pullrequests" %>
+
+<table>
+  <% for (const pull of it.pulls) { %>
+    <tr>
+      <td>#<%= pull.number %></td>
+      <td>
+        <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/pull/<%= pull.number %>">
+          <%= pull.title %>
+        </a>
+      </td>
+      <td class="timestamp"><time title="<%= pull.createdAt %>"><%= pull.createdAt.split("T")[0] %></time></td>
+    </tr>
+  <% } %>
+</table>

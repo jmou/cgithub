@@ -9,6 +9,7 @@ import {
   getGitHubBlob,
   getGitHubCommits,
   getGitHubIssues,
+  getGitHubPulls,
   getGitHubRelease,
   getGitHubReleases,
   getGitHubRepo,
@@ -81,6 +82,12 @@ app.get("/:owner/:repo/issues", async (c) => {
   return tryRender(c, "issues.eta", getGitHubIssues(owner, repo, { q }));
 });
 
+app.get("/:owner/:repo/pulls", async (c) => {
+  const { owner, repo } = c.req.param();
+  const q = c.req.query("q");
+  return tryRender(c, "pulls.eta", getGitHubPulls(owner, repo, { q }));
+});
+
 app.get("/:owner/:repo/search", async (c) => {
   const { owner, repo } = c.req.param();
   const q = c.req.query("q") ?? "";
@@ -88,6 +95,8 @@ app.get("/:owner/:repo/search", async (c) => {
 
   if (type === "issues") {
     return c.redirect(`/${owner}/${repo}/issues?q=${encodeURIComponent(q)}`);
+  } else if (type === "pullrequests") {
+    return c.redirect(`/${owner}/${repo}/pulls?q=${encodeURIComponent(q)}`);
   }
 
   // Redirect unhandled search types (like code, which requires sign in anyway).

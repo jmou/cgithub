@@ -261,6 +261,11 @@ export interface GitHubIssues extends GitHubCommon {
   q?: string;
 }
 
+export interface GitHubPulls extends GitHubCommon {
+  pulls: Issue[];
+  q?: string;
+}
+
 export interface GitHubCommits extends GitHubNav {
   commitGroups: CommitGroup[];
 }
@@ -541,6 +546,41 @@ export async function getGitHubIssues(
   });
 
   return { repo: { owner, name: repo }, issues, q };
+}
+
+export async function getGitHubPulls(
+  owner: string,
+  repo: string,
+  { q }: { q?: string } = {},
+): Promise<GitHubPulls> {
+  const suffix = q ? `?q=${encodeURIComponent(q)}` : "";
+  const html = await fetchGitHubPage(`${owner}/${repo}/pulls${suffix}`);
+  const document = parseDocument(html);
+
+  const pulls: Issue[] = [];
+  for (const row of cssSelect.selectAll(".js-issue-row", document) as unknown as Element[]) {
+    const id = getAttributeValue(row, "id"); // "issue_NNN"
+    const number = id ? parseInt(id.replace("issue_", ""), 10) : 0;
+    if (!number) continue;
+
+    const titleLink = cssSelect.selectOne("a.markdown-title", row);
+    const title = titleLink ? textContent(titleLink).trim() : "";
+
+    const timeElem = cssSelect.selectOne("relative-time", row);
+    const createdAt = timeElem ? getAttributeValue(timeElem, "datetime") || "" : "";
+
+    const stateSpan = cssSelect.selectOne(".tooltipped[aria-label]", row) as Element | null;
+    const ariaLabel = stateSpan ? (getAttributeValue(stateSpan, "aria-label") ?? "") : "";
+    const state = ariaLabel.includes("Merged")
+      ? "MERGED"
+      : ariaLabel.includes("Closed")
+        ? "CLOSED"
+        : "OPEN";
+
+    pulls.push({ number, title, state, createdAt });
+  }
+
+  return { repo: { owner, name: repo }, pulls, q };
 }
 
 export async function getGitHubCommits(
