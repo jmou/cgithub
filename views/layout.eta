@@ -19,6 +19,14 @@ git clone git@github.com:<%= it.repo.owner %>/<%= it.repo.name %>.git</code></pr
         <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/commits/<%= it.branch %><%= it.path && it.path !== '/' ? '/' + it.path : '' %>">Commits</a>
       <% } %>
     </nav>
+    <form action="/<%= it.repo.owner %>/<%= it.repo.name %>/search" method="get">
+      <input type="text" name="q" placeholder="Search…" value="<%= it.q ?? "" %>">
+      <select name="type">
+        <option value="issues" <%= it.searchType === "issues" ? "selected" : "" %>>Issues</option>
+        <option value="code" <%= it.searchType === "code" || it.searchType == null ? "selected" : "" %>>Code</option>
+      </select>
+      <button type="submit">Search</button>
+    </form>
   </div>
 
   <%~ it.body %>

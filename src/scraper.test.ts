@@ -127,12 +127,27 @@ describe("GitHub scraper", () => {
 
       assert.strictEqual(data.repo.owner, "actions");
       assert.strictEqual(data.repo.name, "deploy-pages");
+      assert.strictEqual(data.q, undefined);
 
       const issue402 = data.issues.find((issue) => issue.number === 402);
       assert.ok(issue402);
       assert.strictEqual(issue402.title, "Dry Run");
       assert.strictEqual(issue402.state, "OPEN");
       assert.strictEqual(issue402.createdAt, "2025-07-03T19:07:08Z");
+    });
+
+    it("should fetch filtered issues with q", async () => {
+      const data = await getGitHubIssues("actions", "deploy-pages", {
+        q: "is:issue state:closed",
+      });
+
+      assert.strictEqual(data.repo.owner, "actions");
+      assert.strictEqual(data.repo.name, "deploy-pages");
+      assert.strictEqual(data.q, "is:issue state:closed");
+      const issue417 = data.issues.find((issue) => issue.number === 417);
+      assert.ok(issue417);
+      assert.strictEqual(issue417.title, "Chats");
+      assert.ok(data.issues.every((issue) => issue.title !== ""));
     });
 
     it("should fetch commits", async () => {

@@ -70,7 +70,31 @@ app.get("/:owner/:repo/raw/:branch/:path{.*}", async (c) => {
 
 app.get("/:owner/:repo/issues", async (c) => {
   const { owner, repo } = c.req.param();
-  return tryRender(c, "issues.eta", getGitHubIssues(owner, repo));
+  const q = c.req.query("q");
+
+  // GitHub supports combined issue/PR search, apparently for legacy. We just
+  // redirect to issue-only search.
+  if (q && !/\bis:issue\b/.test(q)) {
+    return c.redirect(`/${owner}/${repo}/issues?q=${encodeURIComponent(`is:issue ${q}`)}`);
+  }
+
+  return tryRender(c, "issues.eta", getGitHubIssues(owner, repo, { q }));
+});
+
+app.get("/:owner/:repo/search", async (c) => {
+  const { owner, repo } = c.req.param();
+  const q = c.req.query("q") ?? "";
+  const type = c.req.query("type") ?? "issues";
+
+  if (type === "issues") {
+    return c.redirect(`/${owner}/${repo}/issues?q=${encodeURIComponent(q)}`);
+  }
+
+  // Redirect unhandled search types (like code, which requires sign in anyway).
+  c.header("Referrer-Policy", "no-referrer");
+  return c.redirect(
+    `https://github.com/${owner}/${repo}/search?${new URLSearchParams(c.req.query()).toString()}`,
+  );
 });
 
 app.get("/:owner/:repo/commits/:branch/:path{.*}?", async (c) => {

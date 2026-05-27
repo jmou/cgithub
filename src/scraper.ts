@@ -258,6 +258,7 @@ interface Issue {
 
 export interface GitHubIssues extends GitHubCommon {
   issues: Issue[];
+  q?: string;
 }
 
 export interface GitHubCommits extends GitHubNav {
@@ -513,9 +514,14 @@ export async function getGitHubBlob(
   });
 }
 
-export async function getGitHubIssues(owner: string, repo: string): Promise<GitHubIssues> {
-  const html = await fetchGitHubPage(`${owner}/${repo}/issues`);
-
+export async function getGitHubIssues(
+  owner: string,
+  repo: string,
+  // We only support is:issue searches (no PR results).
+  { q }: { q?: string } = {},
+): Promise<GitHubIssues> {
+  const suffix = q ? `?q=${encodeURIComponent(q)}` : "";
+  const html = await fetchGitHubPage(`${owner}/${repo}/issues${suffix}`);
   const payload = parsePayload(html);
 
   let issuesQuery: IssueIndexPageQuery | undefined;
@@ -534,13 +540,7 @@ export async function getGitHubIssues(owner: string, repo: string): Promise<GitH
     return { number, title: finalTitle, state, createdAt };
   });
 
-  return {
-    repo: {
-      owner,
-      name: repo,
-    },
-    issues,
-  };
+  return { repo: { owner, name: repo }, issues, q };
 }
 
 export async function getGitHubCommits(

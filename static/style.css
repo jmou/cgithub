@@ -43,14 +43,20 @@ body {
   color: var(--text-color);
 }
 
+a {
+  text-decoration: none;
+  color: var(--link-color);
+}
+
 h1, h2, h3, h4, h5, h6,
 p, pre, ul, ol {
   margin: .5em 0;
 }
 
-a {
-  text-decoration: none;
-  color: var(--link-color);
+input, select, button {
+  background-color: var(--body-background);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
 }
 
 table {
@@ -75,6 +81,7 @@ td {
 
 nav {
   display: flex;
+  margin: .5em 0;
   > a {
     display: block;
     padding-right: .5rem;

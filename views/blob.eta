@@ -1,4 +1,4 @@
-<% layout("./layout.eta") %>
+<% layout("./layout.eta"); it.searchType = "code" %>
 
 <%~ include("./_nav.eta", it) %>
 
