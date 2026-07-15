@@ -36,7 +36,7 @@ describe("GitHub scraper", () => {
       assert.ok(data.info.latestReleaseDate?.startsWith("2026-03-25"));
 
       assert.ok(data.items.length > 0);
-      assert.ok(Object.keys(data.overviewHtml ?? {}).includes("README.md"));
+      assert.ok(typeof data.overviewHtml?.["README.md"] === "string");
     });
 
     it("should fetch tree", async () => {
@@ -60,7 +60,7 @@ describe("GitHub scraper", () => {
         },
       ]);
 
-      assert.ok(Object.keys(data.overviewHtml ?? {}).includes("README.md"));
+      assert.ok(typeof data.overviewHtml?.["README.md"] === "string");
     });
 
     it("should fetch text blob", async () => {

@@ -31,7 +31,8 @@ interface TreeItem {
 
 interface OverviewFile {
   displayName: string;
-  richText?: string;
+  // null when GitHub includes the file without rendered content.
+  richText?: string | null;
 }
 
 interface IssueNode {
@@ -220,7 +221,7 @@ interface GitHubNav extends GitHubCommon {
 
 export interface GitHubTree extends GitHubNav {
   items: TreeItem[];
-  overviewHtml?: Record<string, string>;
+  overviewHtml?: Record<string, string | null>;
 }
 
 export interface RepoInfo {
@@ -443,8 +444,8 @@ function parseRepoInfo(html: string): RepoInfo {
 
 function extractOverviewHtml(
   overviewFiles: OverviewFile[] = [],
-): Record<string, string> | undefined {
-  const result: Record<string, string> = {};
+): Record<string, string | null> | undefined {
+  const result: Record<string, string | null> = {};
   for (const file of overviewFiles) {
     if (file.richText !== undefined) {
       result[file.displayName] = file.richText;

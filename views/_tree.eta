@@ -18,9 +18,13 @@
 
 <% if (it.overviewHtml) { %>
   <% for (const [filename, html] of Object.entries(it.overviewHtml)) { %>
-    <div class="overview box">
-      <header><%= filename %></header>
-      <%~ html %>
-    </div>
+    <% if (html !== null) { %>
+      <div class="overview box">
+        <header><%= filename %></header>
+        <%~ html %>
+      </div>
+    <% } else { %>
+      <!-- No rendered content for <%= filename %> -->
+    <% } %>
   <% } %>
 <% } %>
