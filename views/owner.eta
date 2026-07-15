@@ -7,48 +7,55 @@
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-  <div class="box repo-info">
+  <div class="box">
     <% if (it.avatarUrl) { %>
       <img class="avatar" src="<%= it.avatarUrl %>" alt="" width="64" height="64">
     <% } %>
     <div class="repo"><%= it.name || it.login %></div>
-    <div class="detail"><%= it.login %><%= it.type === "organization" ? " (organization)" : "" %></div>
-    <% if (it.bio) { %>
-      <div class="description"><%= it.bio %></div>
-    <% } %>
-    <% if (it.followers) { %>
-      <div class="detail"><img src="/static/icons/eye.svg" alt="" class="icon"> <%= it.followers %> followers<%= it.following ? ` · ${it.following} following` : "" %></div>
-    <% } %>
-    <% if (it.company) { %>
-      <div class="detail"><%= it.company %></div>
-    <% } %>
+    <div><%= it.login %><%= it.type === "organization" ? " (organization)" : "" %></div>
     <% if (it.location) { %>
-      <div class="detail"><%= it.location %></div>
+      <div><%= it.location %></div>
     <% } %>
-    <% for (const link of it.links) { %>
-      <div class="detail"><img src="/static/icons/link.svg" alt="" class="icon"> <a href="<%= link.href %>" rel="noopener noreferrer"><%= link.text %></a></div>
+    <% if (it.nav.length > 0) { %>
+      <nav>
+        <% for (const item of it.nav) { %>
+          <a href="<%= item.href %>"><%= item.text %></a>
+        <% } %>
+      </nav>
     <% } %>
   </div>
+
+  <% if (it.bio || it.links.length > 0 || it.followers || it.company) { %>
+    <div class="box repo-info">
+      <% if (it.bio) { %>
+        <div class="description"><%= it.bio %></div>
+      <% } %>
+      <% for (const link of it.links) { %>
+        <div class="detail"><img src="/static/icons/link.svg" alt="" class="icon"> <a href="<%= link.href %>" rel="noopener noreferrer"><%= link.text %></a></div>
+      <% } %>
+      <% if (it.followers) { %>
+        <div class="detail"><img src="/static/icons/eye.svg" alt="" class="icon"> <%= it.followers %> followers<%= it.following ? ` · ${it.following} following` : "" %></div>
+      <% } %>
+      <% if (it.company) { %>
+        <div class="detail"><%= it.company %></div>
+      <% } %>
+    </div>
+  <% } %>
 
   <% if (it.pinned.length > 0) { %>
     <section>
       <h2>Pinned</h2>
       <% for (const repo of it.pinned) { %>
-        <div class="box repo-info">
-          <div><a href="/<%= repo.owner %>/<%= repo.name %>"><%= repo.owner === it.login ? repo.name : `${repo.owner}/${repo.name}` %></a></div>
-          <% if (repo.description) { %>
-            <div class="description"><%= repo.description %></div>
-          <% } %>
-          <% if (repo.language) { %>
-            <span class="detail"><%= repo.language %></span>
-          <% } %>
-          <% if (repo.stars) { %>
-            <span class="detail"><img src="/static/icons/star.svg" alt="stars" class="icon"> <%= repo.stars %></span>
-          <% } %>
-          <% if (repo.forks) { %>
-            <span class="detail"><img src="/static/icons/git-fork.svg" alt="forks" class="icon"> <%= repo.forks %></span>
-          <% } %>
-        </div>
+        <%~ include("./_ownerRepo", { repo, login: it.login }) %>
+      <% } %>
+    </section>
+  <% } %>
+
+  <% if (it.repos.length > 0) { %>
+    <section>
+      <h2>Repositories</h2>
+      <% for (const repo of it.repos) { %>
+        <%~ include("./_ownerRepo", { repo, login: it.login }) %>
       <% } %>
     </section>
   <% } %>

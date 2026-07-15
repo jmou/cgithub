@@ -1,0 +1,15 @@
+<div class="box repo-info">
+  <div><a href="/<%= it.repo.owner %>/<%= it.repo.name %>"><%= it.repo.owner === it.login ? it.repo.name : `${it.repo.owner}/${it.repo.name}` %></a></div>
+  <% if (it.repo.description) { %>
+    <div class="description"><%= it.repo.description %></div>
+  <% } %>
+  <% if (it.repo.language) { %>
+    <span class="detail"><%= it.repo.language %></span>
+  <% } %>
+  <% if (it.repo.stars) { %>
+    <span class="detail"><img src="/static/icons/star.svg" alt="stars" class="icon"> <%= it.repo.stars %></span>
+  <% } %>
+  <% if (it.repo.forks) { %>
+    <span class="detail"><img src="/static/icons/git-fork.svg" alt="forks" class="icon"> <%= it.repo.forks %></span>
+  <% } %>
+</div>

@@ -292,13 +292,18 @@ export interface GitHubRelease extends GitHubCommon {
   release: Release;
 }
 
-interface OwnerPinnedRepo {
+interface OwnerRepo {
   owner: string;
   name: string;
   description?: string;
   language?: string;
   stars?: string;
   forks?: string;
+}
+
+interface OwnerNavItem {
+  text: string;
+  href: string;
 }
 
 export interface GitHubOwner {
@@ -313,7 +318,10 @@ export interface GitHubOwner {
   company: string | null;
   location: string | null;
   links: { text: string; href: string }[];
-  pinned: OwnerPinnedRepo[];
+  nav: OwnerNavItem[];
+  pinned: OwnerRepo[];
+  // The repository list on organization overviews; empty for users.
+  repos: OwnerRepo[];
 }
 
 async function fetchGitHubPage(path: string): Promise<string> {
@@ -770,14 +778,8 @@ function selectText(selector: string, context: AnyNode): string | null {
   return textContent(elem).replace(/\s+/g, " ").trim() || null;
 }
 
-// Pinned repositories appear as .pinned-item-list-item on user pages and as
-// [itemprop='owns'] blocks on organization pages.
-function parsePinnedRepos(document: AnyNode): OwnerPinnedRepo[] {
-  const pinned: OwnerPinnedRepo[] = [];
-  const items = cssSelect.selectAll(
-    ".pinned-item-list-item, [itemprop='owns']",
-    document,
-  ) as unknown as Element[];
+function parseRepoItems(items: Element[]): OwnerRepo[] {
+  const repos: OwnerRepo[] = [];
   for (const item of items) {
     const link = cssSelect.selectOne(
       "a:has(span.repo), a[itemprop~='codeRepository']",
@@ -788,7 +790,7 @@ function parsePinnedRepos(document: AnyNode): OwnerPinnedRepo[] {
     const [owner, name] = href.replace(/^\//, "").split("/");
     if (!owner || !name) continue;
 
-    pinned.push({
+    repos.push({
       owner,
       name,
       description: selectText("p.pinned-item-desc, [itemprop='description']", item) ?? undefined,
@@ -797,7 +799,32 @@ function parsePinnedRepos(document: AnyNode): OwnerPinnedRepo[] {
       forks: selectText("a[href$='/forks']", item) ?? undefined,
     });
   }
-  return pinned;
+  return repos;
+}
+
+function parsePinnedRepos(document: AnyNode): OwnerRepo[] {
+  return parseRepoItems(
+    cssSelect.selectAll(".pinned-item-list-item", document) as unknown as Element[],
+  );
+}
+
+// The tabs we surface from the profile page's own navigation. Stars and
+// Overview are deliberately excluded.
+const OWNER_NAV_TABS = ["Repositories", "Projects", "Packages", "People", "Sponsoring"];
+
+function parseOwnerNav(document: AnyNode): OwnerNavItem[] {
+  const nav: OwnerNavItem[] = [];
+  const seen = new Set<string>();
+  const anchors = cssSelect.selectAll("a.UnderlineNav-item", document) as unknown as Element[];
+  for (const anchor of anchors) {
+    const href = getAttributeValue(anchor, "href");
+    // Label text is e.g. "Repositories 12" including the counter.
+    const text = textContent(anchor).replace(/\s+/g, " ").trim().split(" ")[0];
+    if (!href || seen.has(href) || !OWNER_NAV_TABS.includes(text)) continue;
+    seen.add(href);
+    nav.push({ text, href });
+  }
+  return nav;
 }
 
 function parseUser(document: AnyNode, login: string): GitHubOwner {
@@ -832,7 +859,9 @@ function parseUser(document: AnyNode, login: string): GitHubOwner {
     company: selectText("li[itemprop='worksFor']", document),
     location: selectText("li[itemprop='homeLocation']", document),
     links,
+    nav: parseOwnerNav(document),
     pinned: parsePinnedRepos(document),
+    repos: [],
   };
 }
 
@@ -870,7 +899,11 @@ function parseOrganization(document: AnyNode, owner: string): GitHubOwner {
     company: null,
     location: selectText(".orghead [itemprop='location']", document),
     links,
+    nav: parseOwnerNav(document),
     pinned: parsePinnedRepos(document),
+    repos: parseRepoItems(
+      cssSelect.selectAll("#org-repositories [itemprop='owns']", document) as unknown as Element[],
+    ),
   };
 }
 

@@ -285,6 +285,12 @@ describe("GitHub scraper", () => {
       assert.strictEqual(linux.language, "C");
       assert.ok(linux.stars);
       assert.ok(linux.forks);
+
+      assert.deepStrictEqual(data.repos, []);
+      const navTexts = data.nav.map((item) => item.text);
+      assert.deepStrictEqual(navTexts, ["Repositories", "Projects", "Packages"]);
+      const reposTab = data.nav.find((item) => item.text === "Repositories");
+      assert.strictEqual(reposTab?.href, "/torvalds?tab=repositories");
     });
 
     it("should fetch user bio and links", async () => {
@@ -294,6 +300,7 @@ describe("GitHub scraper", () => {
       assert.ok(data.bio && data.bio.length > 0);
       assert.ok(data.links.length > 0);
       assert.ok(data.links.every((link) => link.href.startsWith("https://")));
+      assert.ok(data.nav.some((item) => item.text === "Sponsoring"));
     });
 
     it("should fetch organization profile", async () => {
@@ -310,8 +317,23 @@ describe("GitHub scraper", () => {
       assert.ok(data.links.some((link) => link.href === "https://github.com/about"));
 
       assert.ok(data.pinned.length > 0);
+      assert.ok(data.pinned.length <= 6, "pinned should not include the repository list");
       assert.ok(data.pinned.every((repo) => repo.owner === "github"));
       assert.ok(data.pinned.some((repo) => repo.stars && repo.forks));
+
+      assert.ok(data.repos.length > 0);
+      assert.ok(data.repos.every((repo) => repo.owner === "github"));
+
+      const navTexts = data.nav.map((item) => item.text);
+      assert.deepStrictEqual(navTexts, [
+        "Repositories",
+        "Projects",
+        "Packages",
+        "People",
+        "Sponsoring",
+      ]);
+      const reposTab = data.nav.find((item) => item.text === "Repositories");
+      assert.strictEqual(reposTab?.href, "/orgs/github/repositories");
     });
 
     it("should redirect to GitHub for non-profile pages", async () => {
