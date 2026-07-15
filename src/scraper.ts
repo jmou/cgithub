@@ -227,7 +227,6 @@ export interface RepoInfo {
   description: string | null;
   website: string | null;
   stars: string | null;
-  watchers: string | null;
   forks: string | null;
   numReleases?: number;
   latestReleaseTag?: string;
@@ -386,9 +385,6 @@ function parseRepoInfo(html: string): RepoInfo {
     ? getAttributeValue(starsElem, "title") || textContent(starsElem).trim()
     : null;
 
-  const watchersElem = cssSelect.selectOne("a[href$='/watchers'] strong", document);
-  const watchers = watchersElem ? textContent(watchersElem).trim() : null;
-
   const forksElem = cssSelect.selectOne("#repo-network-counter", document) as Element | null;
   const forks = forksElem
     ? getAttributeValue(forksElem, "title") || textContent(forksElem).trim()
@@ -428,7 +424,6 @@ function parseRepoInfo(html: string): RepoInfo {
     description,
     website,
     stars,
-    watchers,
     forks,
     numReleases,
     latestReleaseTag,

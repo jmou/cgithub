@@ -30,7 +30,6 @@ describe("GitHub scraper", () => {
       );
       assert.strictEqual(data.info.website, "https://pages.github.com");
       assert.strictEqual(data.info.stars?.length, 3);
-      assert.strictEqual(data.info.watchers?.length, 2);
       assert.strictEqual(data.info.forks?.length, 3);
       assert.strictEqual(data.info.numReleases, 38);
       assert.strictEqual(data.info.latestReleaseTag, "v5.0.0");
