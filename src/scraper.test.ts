@@ -8,8 +8,8 @@ import {
   getGitHubRelease,
   getGitHubReleases,
   getGitHubRepo,
+  getGitHubOwner,
   getGitHubTree,
-  getGitHubUser,
   GitHubHTTPError,
   RedirectError,
 } from "./scraper.ts";
@@ -264,10 +264,11 @@ describe("GitHub scraper", () => {
     });
   });
 
-  describe("user pages", () => {
+  describe("owner pages", () => {
     it("should fetch user profile", async () => {
-      const data = await getGitHubUser("torvalds");
+      const data = await getGitHubOwner("torvalds");
 
+      assert.strictEqual(data.type, "user");
       assert.strictEqual(data.login, "torvalds");
       assert.strictEqual(data.name, "Linus Torvalds");
       assert.strictEqual(data.company, "Linux Foundation");
@@ -287,7 +288,7 @@ describe("GitHub scraper", () => {
     });
 
     it("should fetch user bio and links", async () => {
-      const data = await getGitHubUser("sindresorhus");
+      const data = await getGitHubOwner("sindresorhus");
 
       assert.strictEqual(data.login, "sindresorhus");
       assert.ok(data.bio && data.bio.length > 0);
@@ -295,16 +296,34 @@ describe("GitHub scraper", () => {
       assert.ok(data.links.every((link) => link.href.startsWith("https://")));
     });
 
-    it("should redirect to GitHub for organizations", async () => {
-      await assert.rejects(getGitHubUser("github"), (err) => {
+    it("should fetch organization profile", async () => {
+      const data = await getGitHubOwner("github");
+
+      assert.strictEqual(data.type, "organization");
+      assert.strictEqual(data.login, "github");
+      assert.strictEqual(data.name, "GitHub");
+      assert.strictEqual(data.bio, "How people build software.");
+      assert.strictEqual(data.location, "United States of America");
+      assert.ok(data.avatarUrl?.startsWith("https://avatars.githubusercontent.com/"));
+      assert.ok(data.followers);
+      assert.strictEqual(data.following, null);
+      assert.ok(data.links.some((link) => link.href === "https://github.com/about"));
+
+      assert.ok(data.pinned.length > 0);
+      assert.ok(data.pinned.every((repo) => repo.owner === "github"));
+      assert.ok(data.pinned.some((repo) => repo.stars && repo.forks));
+    });
+
+    it("should redirect to GitHub for non-profile pages", async () => {
+      await assert.rejects(getGitHubOwner("features"), (err) => {
         assert(err instanceof RedirectError, "error should be a RedirectError");
-        assert.strictEqual(err.location, "https://github.com/github");
+        assert.strictEqual(err.location, "https://github.com/features");
         return true;
       });
     });
 
-    it("should throw for non-existent user", async () => {
-      await assert.rejects(getGitHubUser("nosuchuserzzzz"), (err) => {
+    it("should throw for non-existent owner", async () => {
+      await assert.rejects(getGitHubOwner("nosuchuserzzzz"), (err) => {
         assert(err instanceof GitHubHTTPError, "error should be an HTTPError");
         assert.strictEqual(err.status, 404);
         return true;

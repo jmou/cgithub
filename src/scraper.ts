@@ -292,7 +292,7 @@ export interface GitHubRelease extends GitHubCommon {
   release: Release;
 }
 
-interface UserPinnedRepo {
+interface OwnerPinnedRepo {
   owner: string;
   name: string;
   description?: string;
@@ -301,17 +301,19 @@ interface UserPinnedRepo {
   forks?: string;
 }
 
-export interface GitHubUser {
+export interface GitHubOwner {
+  type: "user" | "organization";
   login: string;
   name: string | null;
   bio: string | null;
   avatarUrl: string | null;
   followers: string | null;
+  // Users only; always null for organizations.
   following: string | null;
   company: string | null;
   location: string | null;
   links: { text: string; href: string }[];
-  pinned: UserPinnedRepo[];
+  pinned: OwnerPinnedRepo[];
 }
 
 async function fetchGitHubPage(path: string): Promise<string> {
@@ -768,16 +770,37 @@ function selectText(selector: string, context: AnyNode): string | null {
   return textContent(elem).replace(/\s+/g, " ").trim() || null;
 }
 
-export async function getGitHubUser(user: string): Promise<GitHubUser> {
-  const html = await fetchGitHubPage(user);
-  const document = parseDocument(html);
+// Pinned repositories appear as .pinned-item-list-item on user pages and as
+// [itemprop='owns'] blocks on organization pages.
+function parsePinnedRepos(document: AnyNode): OwnerPinnedRepo[] {
+  const pinned: OwnerPinnedRepo[] = [];
+  const items = cssSelect.selectAll(
+    ".pinned-item-list-item, [itemprop='owns']",
+    document,
+  ) as unknown as Element[];
+  for (const item of items) {
+    const link = cssSelect.selectOne(
+      "a:has(span.repo), a[itemprop~='codeRepository']",
+      item,
+    ) as Element | null;
+    const href = link ? getAttributeValue(link, "href") : undefined;
+    if (!href) continue;
+    const [owner, name] = href.replace(/^\//, "").split("/");
+    if (!owner || !name) continue;
 
-  // Organizations and other non-profile pages lack the user vcard.
-  const login = selectText(".p-nickname.vcard-username", document);
-  if (!login) {
-    throw new RedirectError(`https://github.com/${user}`);
+    pinned.push({
+      owner,
+      name,
+      description: selectText("p.pinned-item-desc, [itemprop='description']", item) ?? undefined,
+      language: selectText("[itemprop='programmingLanguage']", item) ?? undefined,
+      stars: selectText("a[href$='/stargazers']", item) ?? undefined,
+      forks: selectText("a[href$='/forks']", item) ?? undefined,
+    });
   }
+  return pinned;
+}
 
+function parseUser(document: AnyNode, login: string): GitHubOwner {
   const avatarElem = cssSelect.selectOne("a[itemprop='image'] img", document) as Element | null;
   const avatarUrl = avatarElem ? getAttributeValue(avatarElem, "src") || null : null;
 
@@ -798,29 +821,8 @@ export async function getGitHubUser(user: string): Promise<GitHubUser> {
     links.push({ text: textContent(anchor).replace(/\s+/g, " ").trim(), href });
   }
 
-  const pinned: UserPinnedRepo[] = [];
-  const pinnedItems = cssSelect.selectAll(
-    ".pinned-item-list-item",
-    document,
-  ) as unknown as Element[];
-  for (const item of pinnedItems) {
-    const link = cssSelect.selectOne("a:has(span.repo)", item) as Element | null;
-    const href = link ? getAttributeValue(link, "href") : undefined;
-    if (!href) continue;
-    const [owner, name] = href.replace(/^\//, "").split("/");
-    if (!owner || !name) continue;
-
-    pinned.push({
-      owner,
-      name,
-      description: selectText("p.pinned-item-desc", item) ?? undefined,
-      language: selectText("[itemprop='programmingLanguage']", item) ?? undefined,
-      stars: selectText("a[href$='/stargazers']", item) ?? undefined,
-      forks: selectText("a[href$='/forks']", item) ?? undefined,
-    });
-  }
-
   return {
+    type: "user",
     login,
     name: selectText(".p-name.vcard-fullname", document),
     bio: selectText(".p-note.user-profile-bio", document),
@@ -830,6 +832,59 @@ export async function getGitHubUser(user: string): Promise<GitHubUser> {
     company: selectText("li[itemprop='worksFor']", document),
     location: selectText("li[itemprop='homeLocation']", document),
     links,
-    pinned,
+    pinned: parsePinnedRepos(document),
   };
+}
+
+function parseOrganization(document: AnyNode, owner: string): GitHubOwner {
+  const avatarElem = cssSelect.selectOne(".orghead img[itemprop='image']", document) as
+    | Element
+    | null;
+  const avatarUrl = avatarElem ? getAttributeValue(avatarElem, "src") || null : null;
+  // The login only appears in the avatar's "@login" alt text.
+  const alt = avatarElem ? getAttributeValue(avatarElem, "alt") : undefined;
+  const login = alt?.replace(/^@/, "") || owner;
+
+  const followers =
+    selectText("a[href$='/followers']", document)?.replace(/ followers?$/, "") ?? null;
+
+  const links: { text: string; href: string }[] = [];
+  const anchors = cssSelect.selectAll(
+    ".orghead a[itemprop='url'], .orghead [itemprop='email'] a",
+    document,
+  ) as unknown as Element[];
+  for (const anchor of anchors) {
+    const href = getAttributeValue(anchor, "href");
+    if (!href) continue;
+    links.push({ text: textContent(anchor).replace(/\s+/g, " ").trim(), href });
+  }
+
+  return {
+    type: "organization",
+    login,
+    name: selectText(".orghead h1", document),
+    bio: selectText(".orghead h1 + div", document),
+    avatarUrl,
+    followers,
+    following: null,
+    company: null,
+    location: selectText(".orghead [itemprop='location']", document),
+    links,
+    pinned: parsePinnedRepos(document),
+  };
+}
+
+export async function getGitHubOwner(owner: string): Promise<GitHubOwner> {
+  const html = await fetchGitHubPage(owner);
+  const document = parseDocument(html);
+
+  const login = selectText(".p-nickname.vcard-username", document);
+  if (login) {
+    return parseUser(document, login);
+  }
+  if (cssSelect.selectOne(".orghead", document)) {
+    return parseOrganization(document, owner);
+  }
+  // Not a profile page (marketing pages like github.com/features, etc.).
+  throw new RedirectError(`https://github.com/${owner}`);
 }

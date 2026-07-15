@@ -9,12 +9,12 @@ import {
   getGitHubBlob,
   getGitHubCommits,
   getGitHubIssues,
+  getGitHubOwner,
   getGitHubPulls,
   getGitHubRelease,
   getGitHubReleases,
   getGitHubRepo,
   getGitHubTree,
-  getGitHubUser,
   GitHubHTTPError,
   RedirectError,
 } from "./scraper.ts";
@@ -52,9 +52,9 @@ async function tryRender<T extends object>(c: Context, template: string, promise
   return c.html(await eta.renderAsync(template, data));
 }
 
-app.get("/:user", async (c) => {
-  const { user } = c.req.param();
-  return tryRender(c, "user.eta", getGitHubUser(user));
+app.get("/:owner", async (c) => {
+  const { owner } = c.req.param();
+  return tryRender(c, "owner.eta", getGitHubOwner(owner));
 });
 
 app.get("/:owner/:repo", async (c) => {

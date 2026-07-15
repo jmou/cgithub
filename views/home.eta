@@ -12,7 +12,7 @@
   </header>
 
   <main>
-    <p>Browse any GitHub repository by navigating to <code>/:owner/:repo</code>, or a user profile at <code>/:user</code></p>
+    <p>Browse any GitHub repository by navigating to <code>/:owner/:repo</code>, or a user or organization profile at <code>/:owner</code></p>
   </main>
 
   <h2>Credits</h2>

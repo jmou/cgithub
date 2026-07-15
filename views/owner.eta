@@ -12,7 +12,7 @@
       <img class="avatar" src="<%= it.avatarUrl %>" alt="" width="64" height="64">
     <% } %>
     <div class="repo"><%= it.name || it.login %></div>
-    <div class="detail"><%= it.login %></div>
+    <div class="detail"><%= it.login %><%= it.type === "organization" ? " (organization)" : "" %></div>
     <% if (it.bio) { %>
       <div class="description"><%= it.bio %></div>
     <% } %>
