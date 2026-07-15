@@ -9,6 +9,7 @@ import {
   getGitHubReleases,
   getGitHubRepo,
   getGitHubTree,
+  getGitHubUser,
   GitHubHTTPError,
   RedirectError,
 } from "./scraper.ts";
@@ -261,6 +262,54 @@ describe("GitHub scraper", () => {
       assert.strictEqual(data.textLines, null);
       assert.strictEqual(data.htmlLines, null);
       assert.strictEqual(data.htmlContent, null);
+    });
+  });
+
+  describe("user pages", () => {
+    it("should fetch user profile", async () => {
+      const data = await getGitHubUser("torvalds");
+
+      assert.strictEqual(data.login, "torvalds");
+      assert.strictEqual(data.name, "Linus Torvalds");
+      assert.strictEqual(data.company, "Linux Foundation");
+      assert.strictEqual(data.location, "Portland, OR");
+      assert.ok(data.avatarUrl?.startsWith("https://avatars.githubusercontent.com/"));
+      assert.ok(data.followers);
+      assert.ok(data.following !== null);
+
+      assert.ok(data.pinned.length > 0);
+      const linux = data.pinned.find((repo) => repo.name === "linux");
+      assert.ok(linux);
+      assert.strictEqual(linux.owner, "torvalds");
+      assert.strictEqual(linux.description, "Linux kernel source tree");
+      assert.strictEqual(linux.language, "C");
+      assert.ok(linux.stars);
+      assert.ok(linux.forks);
+    });
+
+    it("should fetch user bio and links", async () => {
+      const data = await getGitHubUser("sindresorhus");
+
+      assert.strictEqual(data.login, "sindresorhus");
+      assert.ok(data.bio && data.bio.length > 0);
+      assert.ok(data.links.length > 0);
+      assert.ok(data.links.every((link) => link.href.startsWith("https://")));
+    });
+
+    it("should redirect to GitHub for organizations", async () => {
+      await assert.rejects(getGitHubUser("github"), (err) => {
+        assert(err instanceof RedirectError, "error should be a RedirectError");
+        assert.strictEqual(err.location, "https://github.com/github");
+        return true;
+      });
+    });
+
+    it("should throw for non-existent user", async () => {
+      await assert.rejects(getGitHubUser("nosuchuserzzzz"), (err) => {
+        assert(err instanceof GitHubHTTPError, "error should be an HTTPError");
+        assert.strictEqual(err.status, 404);
+        return true;
+      });
     });
   });
 

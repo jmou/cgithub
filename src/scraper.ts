@@ -1,5 +1,5 @@
 import { parseDocument } from "htmlparser2";
-import { type Element } from "domhandler";
+import { type AnyNode, type Element } from "domhandler";
 import { getAttributeValue, getInnerHTML, textContent } from "domutils";
 import * as cssSelect from "css-select";
 
@@ -291,6 +291,28 @@ export interface GitHubReleases extends GitHubCommon {
 
 export interface GitHubRelease extends GitHubCommon {
   release: Release;
+}
+
+interface UserPinnedRepo {
+  owner: string;
+  name: string;
+  description?: string;
+  language?: string;
+  stars?: string;
+  forks?: string;
+}
+
+export interface GitHubUser {
+  login: string;
+  name: string | null;
+  bio: string | null;
+  avatarUrl: string | null;
+  followers: string | null;
+  following: string | null;
+  company: string | null;
+  location: string | null;
+  links: { text: string; href: string }[];
+  pinned: UserPinnedRepo[];
 }
 
 async function fetchGitHubPage(path: string): Promise<string> {
@@ -743,4 +765,76 @@ export async function getGitHubRelease(
   ]);
   base.release.assets = assets;
   return base;
+}
+
+function selectText(selector: string, context: AnyNode): string | null {
+  const elem = cssSelect.selectOne(selector, context);
+  if (!elem) return null;
+  return textContent(elem).replace(/\s+/g, " ").trim() || null;
+}
+
+export async function getGitHubUser(user: string): Promise<GitHubUser> {
+  const html = await fetchGitHubPage(user);
+  const document = parseDocument(html);
+
+  // Organizations and other non-profile pages lack the user vcard.
+  const login = selectText(".p-nickname.vcard-username", document);
+  if (!login) {
+    throw new RedirectError(`https://github.com/${user}`);
+  }
+
+  const avatarElem = cssSelect.selectOne("a[itemprop='image'] img", document) as Element | null;
+  const avatarUrl = avatarElem ? getAttributeValue(avatarElem, "src") || null : null;
+
+  const followers =
+    selectText("a[href$='tab=followers']", document)?.replace(/ followers?$/, "") ?? null;
+  const following =
+    selectText("a[href$='tab=following']", document)?.replace(/ following$/, "") ?? null;
+
+  const links: { text: string; href: string }[] = [];
+  const linkItems = cssSelect.selectAll(
+    "li[itemprop='url'], li[itemprop='social']",
+    document,
+  ) as unknown as Element[];
+  for (const item of linkItems) {
+    const anchor = cssSelect.selectOne("a[href]", item) as Element | null;
+    const href = anchor ? getAttributeValue(anchor, "href") : undefined;
+    if (!anchor || !href) continue;
+    links.push({ text: textContent(anchor).replace(/\s+/g, " ").trim(), href });
+  }
+
+  const pinned: UserPinnedRepo[] = [];
+  const pinnedItems = cssSelect.selectAll(
+    ".pinned-item-list-item",
+    document,
+  ) as unknown as Element[];
+  for (const item of pinnedItems) {
+    const link = cssSelect.selectOne("a:has(span.repo)", item) as Element | null;
+    const href = link ? getAttributeValue(link, "href") : undefined;
+    if (!href) continue;
+    const [owner, name] = href.replace(/^\//, "").split("/");
+    if (!owner || !name) continue;
+
+    pinned.push({
+      owner,
+      name,
+      description: selectText("p.pinned-item-desc", item) ?? undefined,
+      language: selectText("[itemprop='programmingLanguage']", item) ?? undefined,
+      stars: selectText("a[href$='/stargazers']", item) ?? undefined,
+      forks: selectText("a[href$='/forks']", item) ?? undefined,
+    });
+  }
+
+  return {
+    login,
+    name: selectText(".p-name.vcard-fullname", document),
+    bio: selectText(".p-note.user-profile-bio", document),
+    avatarUrl,
+    followers,
+    following,
+    company: selectText("li[itemprop='worksFor']", document),
+    location: selectText("li[itemprop='homeLocation']", document),
+    links,
+    pinned,
+  };
 }

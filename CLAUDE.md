@@ -26,6 +26,7 @@ pnpm test
 **Templates:** `views/*.eta` - Eta templates with layout inheritance (`layout.eta` as base)
 
 **Routes:**
+- `GET /:user` - User profile with pinned repositories
 - `GET /:owner/:repo` - Repository info with directory listing
 - `GET /:owner/:repo/tree/:branch/:path*` - Directory listing
 - `GET /:owner/:repo/blob/:branch/:path` - File content view

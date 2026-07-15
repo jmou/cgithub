@@ -14,6 +14,7 @@ import {
   getGitHubReleases,
   getGitHubRepo,
   getGitHubTree,
+  getGitHubUser,
   GitHubHTTPError,
   RedirectError,
 } from "./scraper.ts";
@@ -35,6 +36,9 @@ async function tryRender<T extends object>(c: Context, template: string, promise
     data = await promise;
   } catch (e) {
     if (e instanceof RedirectError) {
+      if (e.location.startsWith("https://")) {
+        c.header("Referrer-Policy", "no-referrer");
+      }
       return c.redirect(e.location);
     } else if (e instanceof GitHubHTTPError) {
       c.status(e.status as StatusCode);
@@ -47,6 +51,11 @@ async function tryRender<T extends object>(c: Context, template: string, promise
   }
   return c.html(await eta.renderAsync(template, data));
 }
+
+app.get("/:user", async (c) => {
+  const { user } = c.req.param();
+  return tryRender(c, "user.eta", getGitHubUser(user));
+});
 
 app.get("/:owner/:repo", async (c) => {
   const { owner, repo } = c.req.param();

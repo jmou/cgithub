@@ -148,6 +148,11 @@ body > footer {
   font-weight: bold;
 }
 
+.avatar {
+  float: right;
+  clip-path: circle();
+}
+
 .branch {
   display: inline-block;
   margin-right: 1rem;
