@@ -1,0 +1,11 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "cgithub",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-07-01",
+  // Serve public/ (i.e. /static/*) directly from Cloudflare's edge; requests
+  // that don't match a file fall through to the worker.
+  "assets": {
+    "directory": "./public"
+  }
+}

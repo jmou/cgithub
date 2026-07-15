@@ -1,2 +1,4 @@
 /dist/
 /node_modules/
+/.wrangler/
+/src/views.generated.ts
