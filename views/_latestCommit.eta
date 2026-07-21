@@ -1,0 +1,16 @@
+<div class="commit box">
+  <div>
+    <div>
+      <%~ it.commit.shortMessageHtml %>
+    </div>
+    <div class="commit-author">
+      <% for (const author of it.commit.authors) { %>
+        <a href="/<%= author.login %>"><%= author.login %></a>
+      <% } %>
+      <time class="timestamp" title="<%= it.commit.date %>"><%= it.commit.date.split("T")[0] %></time>
+    </div>
+  </div>
+  <div class="commit-sha">
+    <code><%= it.commit.oid.substring(0, 7) %></code>
+  </div>
+</div>

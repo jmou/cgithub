@@ -160,6 +160,68 @@ body > footer {
   border: 1px solid var(--border-color);
 }
 
+.ref-selector-button {
+  anchor-name: --ref-selector-anchor;
+}
+
+.ref-selector-menu {
+  position: absolute;
+  position-anchor: --ref-selector-anchor;
+  position-area: bottom span-right;
+  width: 16rem;
+  max-height: 20rem;
+  overflow-y: auto;
+  overflow-wrap: break-word;
+  background: var(--body-background);
+  border: 1px solid var(--border-color);
+  padding: 0.5rem;
+
+  &::backdrop {
+    background: transparent;
+  }
+}
+
+.ref-selector-tabs {
+  display: flex;
+  margin-bottom: 0.5rem;
+
+  button {
+    flex: 1;
+    padding: 0.25rem;
+    cursor: pointer;
+    &.active {
+      font-weight: bold;
+      border-bottom: 2px solid var(--link-color);
+    }
+  }
+}
+
+.ref-selector-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+
+  li {
+    padding: 0.2rem 0;
+  }
+}
+
+.ref-selector-badge {
+  margin-left: 0.3rem;
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+.ref-selector-empty,
+.ref-selector-more {
+  padding: 0.2rem 0;
+  font-size: 0.85rem;
+}
+
+.latest-commit-placeholder {
+  opacity: 0.7;
+}
+
 .repo-info {
   .description {
     margin-bottom: .2rem;

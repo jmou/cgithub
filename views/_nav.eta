@@ -1,5 +1,14 @@
 <section>
-  <div class="branch"><img src="/static/icons/git-branch.svg" alt="branch" class="icon"> <%= it.branch %></div>
+  <button type="button" class="ref-selector-button branch" command="show-modal" commandfor="ref-selector-menu">
+    <img src="/static/icons/git-branch.svg" alt="branch" class="icon"> <%= it.branch %> ▾
+  </button>
+  <dialog class="ref-selector-menu" id="ref-selector-menu" closedby="any" data-owner="<%= it.repo.owner %>" data-repo="<%= it.repo.name %>">
+    <div class="ref-selector-tabs">
+      <button type="button" class="active" data-ref-type="branches">Branches</button>
+      <button type="button" data-ref-type="tags">Tags</button>
+    </div>
+    <div class="ref-selector-list">Loading…</div>
+  </dialog>
   <% if (it.path && it.path !== "/") { %>
     <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/tree/<%= it.branch %>">(top)</a><%
     const pathParts = it.path.split('/').filter(p => p);

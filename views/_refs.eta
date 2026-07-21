@@ -1,0 +1,17 @@
+<% if (it.refs.length === 0) { %>
+  <div class="ref-selector-empty">No <%= it.type %> found.</div>
+<% } else { %>
+  <ul class="ref-selector-items">
+    <% for (const ref of it.refs) { %>
+      <li>
+        <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/tree/<%= ref.name %>"><%= ref.name %></a>
+        <% if (ref.isDefault) { %><span class="ref-selector-badge">default</span><% } %>
+      </li>
+    <% } %>
+  </ul>
+<% } %>
+<% if (it.hasMore) { %>
+  <div class="ref-selector-more">
+    <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/<%= it.type %>">View all <%= it.type %></a>
+  </div>
+<% } %>

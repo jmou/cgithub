@@ -5,8 +5,10 @@ import {
   getGitHubBlob,
   getGitHubCommits,
   getGitHubIssues,
+  getGitHubLatestCommit,
   getGitHubOwner,
   getGitHubPulls,
+  getGitHubRefs,
   getGitHubRelease,
   getGitHubReleases,
   getGitHubRepo,
@@ -40,6 +42,29 @@ export function createApp(eta: Eta) {
         c.status(500);
         return c.html(eta.render("error.eta", { message: "" + e }));
       }
+    }
+    return c.html(eta.render(template, data));
+  }
+
+  // For fragments fetched asynchronously by client-side JS (see public/static/refs.js):
+  // errors render as an empty body rather than the full error.eta page.
+  async function tryRenderFragment<T extends object>(
+    c: Context,
+    template: string,
+    promise: Promise<T>,
+  ) {
+    let data: T;
+    try {
+      data = await promise;
+    } catch (e) {
+      const status =
+        e instanceof GitHubHTTPError
+          ? (e.status as StatusCode)
+          : e instanceof RedirectError
+            ? 404
+            : 500;
+      c.status(status);
+      return c.body(null);
     }
     return c.html(eta.render(template, data));
   }
@@ -110,6 +135,27 @@ export function createApp(eta: Eta) {
   app.get("/:owner/:repo/commits/:branch/:path{.*}?", async (c) => {
     const { owner, repo, branch, path = "" } = c.req.param();
     return tryRender(c, "commits.eta", getGitHubCommits(owner, repo, branch, path));
+  });
+
+  // Internal endpoints fetched asynchronously by client-side JS, not meant to
+  // be visited directly. Keep the site's initial page loads plain server-
+  // rendered HTML while still surfacing data (branches/tags, latest commit)
+  // that would otherwise require an extra scrape on every page view.
+  app.get("/api/:owner/:repo/refs/:type", async (c) => {
+    const { owner, repo, type } = c.req.param();
+    if (type !== "branches" && type !== "tags") {
+      return c.notFound();
+    }
+    return tryRenderFragment(c, "_refs.eta", getGitHubRefs(owner, repo, type));
+  });
+
+  app.get("/api/:owner/:repo/latest-commit/:branch/:path{.*}?", async (c) => {
+    const { owner, repo, branch, path = "" } = c.req.param();
+    return tryRenderFragment(
+      c,
+      "_latestCommit.eta",
+      getGitHubLatestCommit(owner, repo, branch, path),
+    );
   });
 
   app.get("/:owner/:repo/releases/tag/:tag", async (c) => {

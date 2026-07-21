@@ -70,7 +70,7 @@ interface IssueIndexPageQuery {
 
 type StylingDirective = [number, number, string];
 
-interface Commit {
+export interface Commit {
   oid: string;
   url: string;
   authoredDate: string;
@@ -270,6 +270,34 @@ export interface GitHubCommits extends GitHubNav {
   commitGroups: CommitGroup[];
 }
 
+export interface LatestCommit {
+  oid: string;
+  date: string;
+  shortMessageHtml: string;
+  authors: {
+    login: string;
+    displayName: string;
+    avatarUrl: string;
+  }[];
+}
+
+export interface GitHubLatestCommit extends GitHubCommon {
+  commit: LatestCommit;
+}
+
+export interface Ref {
+  name: string;
+  isDefault?: boolean;
+  date?: string;
+  authorLogin?: string;
+}
+
+export interface GitHubRefs extends GitHubCommon {
+  type: "branches" | "tags";
+  refs: Ref[];
+  hasMore: boolean;
+}
+
 interface Release {
   tagName: string;
   title: string;
@@ -325,13 +353,13 @@ export interface GitHubOwner {
   repos: OwnerRepo[];
 }
 
-async function fetchGitHubPage(path: string): Promise<string> {
+async function fetchGitHubResponse(path: string, accept: string): Promise<Response> {
   // GitHub throttles/blocks requests without realistic browser headers.
   // These headers make the request appear as a standard browser visit.
   const headers = {
     "User-Agent":
       "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-    Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+    Accept: accept,
     "Accept-Language": "en-US,en;q=0.5",
   };
   const response = await fetch(`https://github.com/${path}`, { headers, redirect: "manual" });
@@ -345,10 +373,25 @@ async function fetchGitHubPage(path: string): Promise<string> {
     }
   }
   if (!response.ok) throw new GitHubHTTPError(response.status, response.statusText);
+  return response;
+}
+
+async function fetchGitHubPage(path: string): Promise<string> {
+  const response = await fetchGitHubResponse(
+    path,
+    "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+  );
   return response.text();
 }
 
-function parsePayload(html: string): AppPayload | null {
+// Some routes (e.g. latest-commit) are the same endpoints the React UI itself
+// calls to lazily fill in data; they 406 without an explicit JSON Accept.
+async function fetchGitHubJson<T>(path: string): Promise<T> {
+  const response = await fetchGitHubResponse(path, "application/json");
+  return (await response.json()) as T;
+}
+
+function parseEmbeddedPayload<T>(html: string): T | null {
   const regex = new RegExp(
     `<script type="application/json" data-target="react-app.embeddedData">([^<]+)</script>`,
     "g",
@@ -365,6 +408,10 @@ function parsePayload(html: string): AppPayload | null {
     return data.payload;
   }
   return null;
+}
+
+function parsePayload(html: string): AppPayload | null {
+  return parseEmbeddedPayload<AppPayload>(html);
 }
 
 function parseRepoInfo(html: string): RepoInfo {
@@ -639,6 +686,121 @@ export async function getGitHubCommits(
   };
 }
 
+interface LatestCommitPayload {
+  oid: string;
+  date: string;
+  shortMessageHtmlLink: string;
+  authors: {
+    login: string;
+    displayName: string;
+    avatarUrl: string;
+  }[];
+}
+
+// This is the same endpoint the React UI itself calls to lazily fill in the
+// commit bar above a file listing, rather than the much heavier /commits
+// history page: it returns just the single latest commit as JSON.
+export async function getGitHubLatestCommit(
+  owner: string,
+  repo: string,
+  branch: string,
+  path: string,
+): Promise<GitHubLatestCommit> {
+  const urlPath = path
+    ? `${owner}/${repo}/latest-commit/${branch}/${path}`
+    : `${owner}/${repo}/latest-commit/${branch}`;
+  const payload = await fetchGitHubJson<LatestCommitPayload>(urlPath);
+
+  return {
+    repo: { owner, name: repo },
+    commit: {
+      oid: payload.oid,
+      date: payload.date,
+      shortMessageHtml: payload.shortMessageHtmlLink,
+      authors: payload.authors,
+    },
+  };
+}
+
+interface BranchRefEntry {
+  name: string;
+  isDefault: boolean;
+  authoredDate?: string;
+  author?: { login: string };
+}
+
+interface BranchesPayload {
+  branches: {
+    default?: BranchRefEntry;
+    yours?: BranchRefEntry[];
+    active?: BranchRefEntry[];
+    stale?: BranchRefEntry[];
+  };
+  hasMore?: Record<string, boolean>;
+}
+
+async function getGitHubBranchRefs(owner: string, repo: string): Promise<GitHubRefs> {
+  const html = await fetchGitHubPage(`${owner}/${repo}/branches`);
+  const payload = parseEmbeddedPayload<BranchesPayload>(html);
+
+  if (payload?.branches === undefined) {
+    throw new Error("Could not find branches data in embedded JSON");
+  }
+
+  const { default: defaultBranch, yours = [], active = [], stale = [] } = payload.branches;
+  const entries = [...(defaultBranch ? [defaultBranch] : []), ...yours, ...active, ...stale];
+
+  const seen = new Set<string>();
+  const refs: Ref[] = [];
+  for (const entry of entries) {
+    if (seen.has(entry.name)) continue;
+    seen.add(entry.name);
+    refs.push({
+      name: entry.name,
+      isDefault: entry.isDefault || undefined,
+      date: entry.authoredDate,
+      authorLogin: entry.author?.login,
+    });
+  }
+
+  const hasMore = Object.values(payload.hasMore ?? {}).some(Boolean);
+
+  return { repo: { owner, name: repo }, type: "branches", refs, hasMore };
+}
+
+async function getGitHubTagRefs(owner: string, repo: string): Promise<GitHubRefs> {
+  const html = await fetchGitHubPage(`${owner}/${repo}/tags`);
+  const document = parseDocument(html);
+
+  const refs: Ref[] = [];
+  for (const row of cssSelect.selectAll(".Box-row", document) as unknown as Element[]) {
+    const nameElem = cssSelect.selectOne("h2 a", row);
+    if (!nameElem) continue;
+    const name = textContent(nameElem).trim();
+    if (!name) continue;
+
+    // The row has two <relative-time> elements: a release/tag creation
+    // timestamp, then the tagged commit's authored date. We want the latter.
+    const timeElems = cssSelect.selectAll("relative-time", row);
+    const timeElem = timeElems[1] as Element | undefined;
+    const date = timeElem ? getAttributeValue(timeElem, "datetime") || undefined : undefined;
+
+    refs.push({ name, date });
+  }
+
+  const hasMore = cssSelect.selectOne(".pagination a", document) !== null;
+
+  return { repo: { owner, name: repo }, type: "tags", refs, hasMore };
+}
+
+export async function getGitHubRefs(
+  owner: string,
+  repo: string,
+  type: "branches" | "tags",
+): Promise<GitHubRefs> {
+  return type === "branches" ? getGitHubBranchRefs(owner, repo) : getGitHubTagRefs(owner, repo);
+}
+
 function parseRelease(section: Element, title: string): Release {
   // Extract tag name from link
   const tagLink = cssSelect.selectOne('a[href*="/tree/"]', section);
@@ -867,9 +1029,10 @@ function parseUser(document: AnyNode, login: string): GitHubOwner {
 }
 
 function parseOrganization(document: AnyNode, owner: string): GitHubOwner {
-  const avatarElem = cssSelect.selectOne(".orghead img[itemprop='image']", document) as
-    | Element
-    | null;
+  const avatarElem = cssSelect.selectOne(
+    ".orghead img[itemprop='image']",
+    document,
+  ) as Element | null;
   const avatarUrl = avatarElem ? getAttributeValue(avatarElem, "src") || null : null;
   // The login only appears in the avatar's "@login" alt text.
   const alt = avatarElem ? getAttributeValue(avatarElem, "alt") : undefined;

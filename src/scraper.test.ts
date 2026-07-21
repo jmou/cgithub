@@ -4,7 +4,9 @@ import {
   getGitHubBlob,
   getGitHubCommits,
   getGitHubIssues,
+  getGitHubLatestCommit,
   getGitHubPulls,
+  getGitHubRefs,
   getGitHubRelease,
   getGitHubReleases,
   getGitHubRepo,
@@ -203,6 +205,45 @@ describe("GitHub scraper", () => {
       assert.ok(firstRelease.title.match(/^v\d/));
       assert.ok(firstRelease.publishedAt.length > 0);
       assert.ok(firstRelease.bodyHtml.length > 0);
+    });
+
+    it("should fetch latest commit for a path", async () => {
+      const data = await getGitHubLatestCommit("actions", "deploy-pages", "main", "src");
+
+      assert.strictEqual(data.repo.owner, "actions");
+      assert.strictEqual(data.repo.name, "deploy-pages");
+      assert.ok(data.commit);
+      assert.strictEqual(data.commit.oid.length, 40);
+      assert.ok(data.commit.shortMessageHtml.length > 0);
+      assert.ok(data.commit.date.length > 0);
+      assert.ok(data.commit.authors.length > 0);
+    });
+
+    it("should fetch branches", async () => {
+      const data = await getGitHubRefs("actions", "deploy-pages", "branches");
+
+      assert.strictEqual(data.repo.owner, "actions");
+      assert.strictEqual(data.repo.name, "deploy-pages");
+      assert.strictEqual(data.type, "branches");
+
+      assert.ok(data.refs.length > 0);
+      const main = data.refs.find((ref) => ref.name === "main");
+      assert.ok(main);
+      assert.strictEqual(main.isDefault, true);
+    });
+
+    it("should fetch tags", async () => {
+      const data = await getGitHubRefs("actions", "deploy-pages", "tags");
+
+      assert.strictEqual(data.repo.owner, "actions");
+      assert.strictEqual(data.repo.name, "deploy-pages");
+      assert.strictEqual(data.type, "tags");
+
+      assert.ok(data.refs.length > 0);
+      const tag = data.refs.find((ref) => ref.name === "v5.0.0");
+      assert.ok(tag);
+      assert.ok(tag.date?.length);
+      assert.strictEqual(data.hasMore, true);
     });
 
     it("should fetch single release", async () => {
