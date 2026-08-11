@@ -1,0 +1,17 @@
+<% if (it.languages.length > 0) { %>
+  <div class="languages box">
+    <div class="language-bar">
+      <% for (const lang of it.languages) { %>
+        <span style="width: <%= lang.percentage %>%; background: <%= lang.color ?? "#ededed" %>" title="<%= lang.name %> <%= lang.percentage %>%"></span>
+      <% } %>
+    </div>
+    <ul class="language-list">
+      <% for (const lang of it.languages) { %>
+        <li>
+          <span class="language-dot" style="background: <%= lang.color ?? "#ededed" %>"></span>
+          <%= lang.name %> <span class="language-percentage"><%= lang.percentage %>%</span>
+        </li>
+      <% } %>
+    </ul>
+  </div>
+<% } %>

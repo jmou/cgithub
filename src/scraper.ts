@@ -285,6 +285,17 @@ export interface GitHubLatestCommit extends GitHubCommon {
   commit: LatestCommit;
 }
 
+export interface Language {
+  // "Other" for the aggregate bucket GitHub reports without a name.
+  name: string;
+  percentage: number;
+  color: string | null;
+}
+
+export interface GitHubLanguages extends GitHubCommon {
+  languages: Language[];
+}
+
 export interface Ref {
   name: string;
   isDefault?: boolean;
@@ -720,6 +731,34 @@ export async function getGitHubLatestCommit(
       authors: payload.authors,
     },
   };
+}
+
+interface SidebarPayload {
+  languages?: {
+    languages: {
+      // Absent for the "Other" bucket.
+      name?: string;
+      percentage: number;
+      color?: string;
+    }[];
+  };
+}
+
+// The repository sidebar (languages, contributors, ...) is not rendered into
+// the repo page at all; GitHub's own UI lazily fetches it as JSON from here.
+export async function getGitHubLanguages(owner: string, repo: string): Promise<GitHubLanguages> {
+  const payload = await fetchGitHubJson<SidebarPayload>(`${owner}/${repo}/_sidebar`);
+
+  const languages: Language[] = [];
+  for (const entry of payload.languages?.languages ?? []) {
+    languages.push({
+      name: entry.name ?? "Other",
+      percentage: entry.percentage,
+      color: entry.color ?? null,
+    });
+  }
+
+  return { repo: { owner, name: repo }, languages };
 }
 
 interface BranchRefEntry {

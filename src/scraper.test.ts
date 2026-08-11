@@ -4,6 +4,7 @@ import {
   getGitHubBlob,
   getGitHubCommits,
   getGitHubIssues,
+  getGitHubLanguages,
   getGitHubLatestCommit,
   getGitHubPulls,
   getGitHubRefs,
@@ -217,6 +218,33 @@ describe("GitHub scraper", () => {
       assert.ok(data.commit.shortMessageHtml.length > 0);
       assert.ok(data.commit.date.length > 0);
       assert.ok(data.commit.authors.length > 0);
+    });
+
+    it("should fetch languages", async () => {
+      const data = await getGitHubLanguages("actions", "deploy-pages");
+
+      assert.strictEqual(data.repo.owner, "actions");
+      assert.strictEqual(data.repo.name, "deploy-pages");
+
+      assert.deepStrictEqual(data.languages, [
+        { name: "JavaScript", percentage: 100, color: "#f1e05a" },
+      ]);
+    });
+
+    it("should fetch languages for a multi-language repository", async () => {
+      const data = await getGitHubLanguages("rust-lang", "rust");
+
+      const rust = data.languages.find((language) => language.name === "Rust");
+      assert.ok(rust);
+      assert.ok(rust.percentage > 50);
+      assert.strictEqual(rust.color, "#dea584");
+
+      // The aggregate bucket comes back without a name.
+      const other = data.languages.find((language) => language.name === "Other");
+      assert.ok(other);
+
+      const total = data.languages.reduce((sum, language) => sum + language.percentage, 0);
+      assert.ok(Math.abs(total - 100) < 1);
     });
 
     it("should fetch branches", async () => {

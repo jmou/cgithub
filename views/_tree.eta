@@ -1,7 +1,7 @@
 <%~ include("./_nav.eta", {...it, isTree: true}) %>
 
 <% const commitPath = it.path && it.path !== "/" ? it.path : ""; %>
-<div class="latest-commit-placeholder box" data-src="/api/<%= it.repo.owner %>/<%= it.repo.name %>/latest-commit/<%= it.branch %>/<%= commitPath %>">Loading latest commit…</div>
+<div class="placeholder box" data-src="/api/<%= it.repo.owner %>/<%= it.repo.name %>/latest-commit/<%= it.branch %>/<%= commitPath %>">Loading latest commit…</div>
 
 <table>
   <% for (const item of it.items) { %>

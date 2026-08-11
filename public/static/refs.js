@@ -1,8 +1,8 @@
-// Progressive enhancement for two bits of data GitHub itself loads lazily:
-// the branch/tag dropdown and the latest-commit bar above a file listing.
-// Both degrade gracefully without JS: the button's command/commandfor still
-// opens the (empty) dialog natively; the commit placeholder just never fills
-// in.
+// Progressive enhancement for the bits of data GitHub itself loads lazily:
+// the branch/tag dropdown, the latest-commit bar above a file listing, and the
+// language breakdown. All degrade gracefully without JS: the button's
+// command/commandfor still opens the (empty) dialog natively; the placeholders
+// just never fill in.
 document.addEventListener("DOMContentLoaded", () => {
   const dialog = document.querySelector(".ref-selector-menu");
   if (dialog) {
@@ -44,17 +44,16 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  const commitPlaceholder = document.querySelector(".latest-commit-placeholder");
-  if (commitPlaceholder) {
-    fetch(commitPlaceholder.dataset.src)
+  for (const placeholder of document.querySelectorAll(".placeholder[data-src]")) {
+    fetch(placeholder.dataset.src)
       .then((res) => (res.ok ? res.text() : ""))
       .then((html) => {
         if (html.trim()) {
-          commitPlaceholder.outerHTML = html;
+          placeholder.outerHTML = html;
         } else {
-          commitPlaceholder.remove();
+          placeholder.remove();
         }
       })
-      .catch(() => commitPlaceholder.remove());
+      .catch(() => placeholder.remove());
   }
 });

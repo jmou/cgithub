@@ -29,4 +29,6 @@
   </div>
 <% } %>
 
+<div class="placeholder box" data-src="/api/<%= it.repo.owner %>/<%= it.repo.name %>/languages">Loading languages…</div>
+
 <%~ include("./_tree", it) %>

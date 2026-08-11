@@ -5,6 +5,7 @@ import {
   getGitHubBlob,
   getGitHubCommits,
   getGitHubIssues,
+  getGitHubLanguages,
   getGitHubLatestCommit,
   getGitHubOwner,
   getGitHubPulls,
@@ -156,6 +157,11 @@ export function createApp(eta: Eta) {
       "_latestCommit.eta",
       getGitHubLatestCommit(owner, repo, branch, path),
     );
+  });
+
+  app.get("/api/:owner/:repo/languages", async (c) => {
+    const { owner, repo } = c.req.param();
+    return tryRenderFragment(c, "_languages.eta", getGitHubLanguages(owner, repo));
   });
 
   app.get("/:owner/:repo/releases/tag/:tag", async (c) => {
