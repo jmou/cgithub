@@ -44,7 +44,10 @@ export function createApp(eta: Eta) {
         return c.html(eta.render("error.eta", { message: "" + e }));
       }
     }
-    return c.html(eta.render(template, data));
+    // Our URLs mirror GitHub's, so the page we scraped is the same path there.
+    const { pathname, search } = new URL(c.req.url);
+    const githubUrl = `https://github.com${pathname}${search}`;
+    return c.html(eta.render(template, { ...data, githubUrl }));
   }
 
   // For fragments fetched asynchronously by client-side JS (see public/static/refs.js):
