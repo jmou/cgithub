@@ -1,6 +1,10 @@
 <section>
+  <%
+  const isCommitHash = /^[0-9a-f]{40}$/.test(it.branch);
+  const refLabel = isCommitHash ? it.branch.slice(0, 7) : it.branch;
+  %>
   <button type="button" class="ref-selector-button branch" command="show-modal" commandfor="ref-selector-menu">
-    <img src="/static/icons/git-branch.svg" alt="branch" class="icon"> <%= it.branch %> ▾
+    <img src="/static/icons/git-branch.svg" alt="branch" class="icon"> <%= refLabel %> ▾
   </button>
   <dialog class="ref-selector-menu" id="ref-selector-menu" closedby="any" data-owner="<%= it.repo.owner %>" data-repo="<%= it.repo.name %>">
     <div class="ref-selector-tabs">
