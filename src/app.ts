@@ -19,8 +19,21 @@ import {
   RedirectError,
 } from "./scraper.ts";
 
+// Our URLs mirror GitHub's, so the same path there is the page we scraped.
+function githubUrlFor(c: Context) {
+  const { pathname, search } = new URL(c.req.url);
+  return `https://github.com${pathname}${search}`;
+}
+
 export function createApp(eta: Eta) {
   const app = new Hono();
+
+  // Use a meta refresh to avoid redirect loops in certain situations; we become
+  // the initiator origin even if we are the target of a redirection.
+  function redirectToGitHub(c: Context, location: string) {
+    c.header("Referrer-Policy", "no-referrer");
+    return c.html(eta.render("redirect.eta", { location }));
+  }
 
   app.get("/", async (c) => {
     return c.html(eta.render("home.eta", {}));
@@ -33,7 +46,7 @@ export function createApp(eta: Eta) {
     } catch (e) {
       if (e instanceof RedirectError) {
         if (e.location.startsWith("https://")) {
-          c.header("Referrer-Policy", "no-referrer");
+          return redirectToGitHub(c, e.location);
         }
         return c.redirect(e.location);
       } else if (e instanceof GitHubHTTPError) {
@@ -45,10 +58,7 @@ export function createApp(eta: Eta) {
         return c.html(eta.render("error.eta", { message: "" + e }));
       }
     }
-    // Our URLs mirror GitHub's, so the page we scraped is the same path there.
-    const { pathname, search } = new URL(c.req.url);
-    const githubUrl = `https://github.com${pathname}${search}`;
-    return c.html(eta.render(template, { ...data, githubUrl, commit }));
+    return c.html(eta.render(template, { ...data, githubUrl: githubUrlFor(c), commit }));
   }
 
   // For fragments fetched asynchronously by client-side JS (see public/static/refs.js):
@@ -96,8 +106,10 @@ export function createApp(eta: Eta) {
 
   app.get("/:owner/:repo/raw/:branch/:path{.*}", async (c) => {
     const { owner, repo, branch, path } = c.req.param();
-    c.header("Referrer-Policy", "no-referrer");
-    return c.redirect(`https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${path}`);
+    return redirectToGitHub(
+      c,
+      `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${path}`,
+    );
   });
 
   app.get("/:owner/:repo/issues", async (c) => {
@@ -131,10 +143,7 @@ export function createApp(eta: Eta) {
     }
 
     // Redirect unhandled search types (like code, which requires sign in anyway).
-    c.header("Referrer-Policy", "no-referrer");
-    return c.redirect(
-      `https://github.com/${owner}/${repo}/search?${new URLSearchParams(c.req.query()).toString()}`,
-    );
+    return redirectToGitHub(c, githubUrlFor(c));
   });
 
   app.get("/:owner/:repo/commits/:branch/:path{.*}?", async (c) => {
@@ -179,9 +188,7 @@ export function createApp(eta: Eta) {
   });
 
   app.all("*", async (c) => {
-    const path = c.req.path;
-    c.header("Referrer-Policy", "no-referrer");
-    return c.redirect(`https://github.com${path}`);
+    return redirectToGitHub(c, githubUrlFor(c));
   });
 
   return app;

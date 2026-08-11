@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "node scripts/build.ts && wrangler dev",
     "deploy": "node scripts/build.ts && wrangler deploy",
-    "test": "node --test --test-concurrency=4 src/scraper.test.ts"
+    "test": "node --test --test-concurrency=4 src/app.test.ts src/scraper.test.ts"
   },
   "dependencies": {
     "css-select": "^6.0.0",
@@ -18,7 +18,9 @@
     "htmlparser2": "^10.1.0"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["workerd"]
+    "onlyBuiltDependencies": [
+      "workerd"
+    ]
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

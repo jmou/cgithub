@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="refresh" content="1; url=<%= it.location %>">
+  <title>Redirecting to GitHub</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <p>cgithub can't render this page. Redirecting to
+  <a href="<%= it.location %>" rel="noreferrer"><%= it.location %></a>…</p>
+</body>
+</html>
