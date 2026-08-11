@@ -1,10 +1,14 @@
+<%
+const linkPrefix = `/${it.repo.owner}/${it.repo.name}/${it.view}/`;
+const linkSuffix = it.path ? `/${it.path}` : "";
+%>
 <% if (it.refs.length === 0) { %>
   <div class="ref-selector-empty">No <%= it.type %> found.</div>
 <% } else { %>
   <ul class="ref-selector-items">
     <% for (const ref of it.refs) { %>
       <li>
-        <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/tree/<%= ref.name %>"><%= ref.name %></a>
+        <a href="<%= linkPrefix %><%= ref.name %><%= linkSuffix %>"><%= ref.name %></a>
         <% if (ref.isDefault) { %><span class="ref-selector-badge">default</span><% } %>
       </li>
     <% } %>

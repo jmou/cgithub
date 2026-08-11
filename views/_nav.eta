@@ -6,7 +6,7 @@
   <button type="button" class="ref-selector-button branch" command="show-modal" commandfor="ref-selector-menu">
     <img src="/static/icons/git-branch.svg" alt="branch" class="icon"> <%= refLabel %> ▾
   </button>
-  <dialog class="ref-selector-menu" id="ref-selector-menu" closedby="any" data-owner="<%= it.repo.owner %>" data-repo="<%= it.repo.name %>">
+  <dialog class="ref-selector-menu" id="ref-selector-menu" closedby="any" data-owner="<%= it.repo.owner %>" data-repo="<%= it.repo.name %>" data-view="<%= it.view %>"<% if (it.path && it.path !== "/") { %> data-path="<%= it.path %>"<% } %>>
     <div class="ref-selector-tabs">
       <button type="button" class="active" data-ref-type="branches">Branches</button>
       <button type="button" data-ref-type="tags">Tags</button>
@@ -22,7 +22,7 @@
       currentPath += (currentPath ? '/' : '') + part;
       const isLast = i === pathParts.length - 1;
       if (isLast) {
-        %>/<%= part %><%= it.isTree ? "/" : "" %><%
+        %>/<%= part %><%= it.view === "tree" ? "/" : "" %><%
       } else {
         %>/<a href="/<%= it.repo.owner %>/<%= it.repo.name %>/tree/<%= it.branch %>/<%= currentPath %>"><%= part %></a><%
       }

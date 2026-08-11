@@ -1,6 +1,6 @@
 <% layout("./layout.eta"); it.searchType = "code" %>
 
-<%~ include("./_nav.eta", it) %>
+<%~ include("./_nav.eta", {...it, view: "blob"}) %>
 
 <div>
   <% if (it.language) { %>

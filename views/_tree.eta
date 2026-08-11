@@ -1,4 +1,4 @@
-<%~ include("./_nav.eta", {...it, isTree: true}) %>
+<%~ include("./_nav.eta", {...it, view: "tree"}) %>
 
 <% const commitPath = it.path && it.path !== "/" ? it.path : ""; %>
 <div class="placeholder commit box" data-src="/api/<%= it.repo.owner %>/<%= it.repo.name %>/latest-commit/<%= it.branch %>/<%= commitPath %>">

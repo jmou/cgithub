@@ -155,12 +155,18 @@ export function createApp(eta: Eta) {
   // be visited directly. Keep the site's initial page loads plain server-
   // rendered HTML while still surfacing data (branches/tags, latest commit)
   // that would otherwise require an extra scrape on every page view.
-  app.get("/api/:owner/:repo/refs/:type", async (c) => {
-    const { owner, repo, type } = c.req.param();
+  // The view and path are where the picker was opened, so each ref can link to
+  // the same page on another ref.
+  app.get("/api/:owner/:repo/refs/:type/:view/:path{.*}?", async (c) => {
+    const { owner, repo, type, view, path = "" } = c.req.param();
     if (type !== "branches" && type !== "tags") {
       return c.notFound();
     }
-    return tryRenderFragment(c, "_refs.eta", getGitHubRefs(owner, repo, type));
+    if (view !== "tree" && view !== "blob" && view !== "commits") {
+      return c.notFound();
+    }
+    const refs = getGitHubRefs(owner, repo, type).then((data) => ({ ...data, view, path }));
+    return tryRenderFragment(c, "_refs.eta", refs);
   });
 
   app.get("/api/:owner/:repo/latest-commit/:branch/:path{.*}?", async (c) => {

@@ -7,7 +7,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const dialog = document.querySelector(".ref-selector-menu");
   if (dialog) {
     const list = dialog.querySelector(".ref-selector-list");
-    const { owner, repo } = dialog.dataset;
+    // The view and path let the picker link to the same place on another ref
+    // rather than to the repository root.
+    const { owner, repo, view, path = "" } = dialog.dataset;
     const cache = {};
 
     async function load(type) {
@@ -17,7 +19,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       list.textContent = "Loading…";
       try {
-        const res = await fetch(`/api/${owner}/${repo}/refs/${type}`);
+        const res = await fetch(`/api/${owner}/${repo}/refs/${type}/${view}/${path}`);
         const html = res.ok ? await res.text() : "";
         cache[type] = html || "Failed to load.";
         list.innerHTML = cache[type];

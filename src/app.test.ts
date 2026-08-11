@@ -8,6 +8,56 @@ import { createApp } from "./app.ts";
 const eta = new Eta({ views: path.join(import.meta.dirname, "..", "views") });
 const app = createApp(eta);
 
+describe("branch picker", () => {
+  const repo = { owner: "actions", name: "deploy-pages" };
+  const refs = [{ name: "main", isDefault: true }, { name: "v4" }];
+
+  it("should keep the current view and path", () => {
+    const blob = eta.render("_refs.eta", {
+      repo,
+      refs,
+      type: "branches",
+      view: "blob",
+      path: "src/main.ts",
+    });
+    const tree = eta.render("_refs.eta", {
+      repo,
+      refs,
+      type: "branches",
+      view: "tree",
+      path: "src",
+    });
+
+    assert.match(blob, /href="\/actions\/deploy-pages\/blob\/main\/src\/main.ts"/);
+    assert.match(blob, /href="\/actions\/deploy-pages\/blob\/v4\/src\/main.ts"/);
+    assert.match(tree, /href="\/actions\/deploy-pages\/tree\/v4\/src"/);
+  });
+
+  it("should link to the root tree without a path", () => {
+    const html = eta.render("_refs.eta", { repo, refs, type: "branches", view: "tree", path: "" });
+
+    assert.match(html, /href="\/actions\/deploy-pages\/tree\/main"/);
+  });
+
+  it("should not build ref links for views it does not serve", async () => {
+    const res = await app.request("http://cgithub.example/api/a/b/refs/branches/raw/README.md");
+
+    assert.strictEqual(res.status, 404);
+  });
+
+  it("should tell the refs endpoint where the picker was opened", () => {
+    const nav = { repo, branch: "main", path: "src" };
+
+    const blob = eta.render("_nav.eta", { ...nav, view: "blob", path: "src/main.ts" });
+    assert.match(blob, /data-view="blob" data-path="src\/main.ts"/);
+    assert.match(
+      eta.render("_nav.eta", { ...nav, view: "tree" }),
+      /data-view="tree" data-path="src"/,
+    );
+    assert.doesNotMatch(eta.render("_nav.eta", { ...nav, view: "tree", path: "" }), /data-path=/);
+  });
+});
+
 describe("redirects to GitHub", () => {
   // An HTTP redirect would be caught by the extension's declarativeNetRequest
   // rules and bounced straight back here.
@@ -21,7 +71,7 @@ describe("redirects to GitHub", () => {
     const body = await res.text();
     assert.match(
       body,
-      /<meta http-equiv="refresh" content="2; url=https:\/\/github.com\/a\/b\/c\?x=1">/,
+      /<meta http-equiv="refresh" content="1; url=https:\/\/github.com\/a\/b\/c\?x=1">/,
     );
     assert.doesNotMatch(body, /<script/);
   });

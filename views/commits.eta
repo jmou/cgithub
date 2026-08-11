@@ -1,6 +1,6 @@
 <% layout("./layout.eta") %>
 
-<%~ include("./_nav.eta", {...it, isTree: false}) %>
+<%~ include("./_nav.eta", {...it, view: "commits"}) %>
 
 <% for (const group of it.commitGroups) { %>
   <h3><%= group.title %></h3>
