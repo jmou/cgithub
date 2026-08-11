@@ -5,8 +5,8 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "dev": "node scripts/compile-views.ts && wrangler dev",
-    "deploy": "node scripts/compile-views.ts && wrangler deploy",
+    "dev": "node scripts/build.ts && wrangler dev",
+    "deploy": "node scripts/build.ts && wrangler deploy",
     "test": "node --test --test-concurrency=4 src/scraper.test.ts"
   },
   "dependencies": {

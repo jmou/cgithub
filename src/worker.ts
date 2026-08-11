@@ -5,7 +5,7 @@ import { createApp } from "./app.ts";
 import { views } from "./views.generated.ts";
 
 // Workers disallow runtime code generation, so templates are precompiled by
-// scripts/compile-views.ts and preloaded into Eta's cache here. With
+// scripts/build.ts and preloaded into Eta's cache here. With
 // cache: true, Eta serves them from the cache and never compiles.
 const eta = new Eta({ cache: true });
 

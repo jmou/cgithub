@@ -1,6 +1,7 @@
 import type { Eta } from "eta";
 import { type Context, Hono } from "hono";
 import type { StatusCode } from "hono/utils/http-status";
+import { commit } from "./commit.generated.ts";
 import {
   getGitHubBlob,
   getGitHubCommits,
@@ -47,7 +48,7 @@ export function createApp(eta: Eta) {
     // Our URLs mirror GitHub's, so the page we scraped is the same path there.
     const { pathname, search } = new URL(c.req.url);
     const githubUrl = `https://github.com${pathname}${search}`;
-    return c.html(eta.render(template, { ...data, githubUrl }));
+    return c.html(eta.render(template, { ...data, githubUrl, commit }));
   }
 
   // For fragments fetched asynchronously by client-side JS (see public/static/refs.js):
