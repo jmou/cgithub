@@ -6,7 +6,7 @@ import {
   getGitHubBlob,
   getGitHubCommits,
   getGitHubIssues,
-  getGitHubLanguages,
+  getGitHubSidebar,
   getGitHubLatestCommit,
   getGitHubOwner,
   getGitHubPulls,
@@ -178,9 +178,9 @@ export function createApp(eta: Eta) {
     );
   });
 
-  app.get("/api/:owner/:repo/languages", async (c) => {
+  app.get("/api/:owner/:repo/sidebar", async (c) => {
     const { owner, repo } = c.req.param();
-    return tryRenderFragment(c, "_languages.eta", getGitHubLanguages(owner, repo));
+    return tryRenderFragment(c, "_sidebar.eta", getGitHubSidebar(owner, repo));
   });
 
   app.get("/:owner/:repo/releases/tag/:tag", async (c) => {

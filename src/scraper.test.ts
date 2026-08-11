@@ -4,7 +4,7 @@ import {
   getGitHubBlob,
   getGitHubCommits,
   getGitHubIssues,
-  getGitHubLanguages,
+  getGitHubSidebar,
   getGitHubLatestCommit,
   getGitHubPulls,
   getGitHubRefs,
@@ -35,8 +35,6 @@ describe("GitHub scraper", () => {
       assert.strictEqual(data.info.stars?.length, 3);
       assert.strictEqual(data.info.forks?.length, 3);
       assert.strictEqual(data.info.numReleases, 38);
-      assert.strictEqual(data.info.latestReleaseTag, "v5.0.0");
-      assert.ok(data.info.latestReleaseDate?.startsWith("2026-03-25"));
 
       assert.ok(data.items.length > 0);
       assert.ok(typeof data.overviewHtml?.["README.md"] === "string");
@@ -220,8 +218,8 @@ describe("GitHub scraper", () => {
       assert.ok(data.commit.authors.length > 0);
     });
 
-    it("should fetch languages", async () => {
-      const data = await getGitHubLanguages("actions", "deploy-pages");
+    it("should fetch the sidebar", async () => {
+      const data = await getGitHubSidebar("actions", "deploy-pages");
 
       assert.strictEqual(data.repo.owner, "actions");
       assert.strictEqual(data.repo.name, "deploy-pages");
@@ -229,10 +227,13 @@ describe("GitHub scraper", () => {
       assert.deepStrictEqual(data.languages, [
         { name: "JavaScript", percentage: 100, color: "#f1e05a" },
       ]);
+
+      assert.strictEqual(data.latestRelease?.tag, "v5.0.0");
+      assert.ok(data.latestRelease?.publishedAt?.startsWith("2026-03-25"));
     });
 
-    it("should fetch languages for a multi-language repository", async () => {
-      const data = await getGitHubLanguages("rust-lang", "rust");
+    it("should fetch the sidebar for a multi-language repository", async () => {
+      const data = await getGitHubSidebar("rust-lang", "rust");
 
       const rust = data.languages.find((language) => language.name === "Rust");
       assert.ok(rust);

@@ -52,10 +52,20 @@ document.addEventListener("DOMContentLoaded", () => {
       .then((html) => {
         if (html.trim()) {
           placeholder.outerHTML = html;
+          relocate();
         } else {
           placeholder.remove();
         }
       })
       .catch(() => placeholder.remove());
+  }
+
+  // A fragment may carry a node that belongs elsewhere on the page, where an
+  // empty element of that id holds its spot: the sidebar's latest release
+  // reads as part of the release count, far from the languages it arrives with.
+  function relocate() {
+    for (const node of document.querySelectorAll("[data-target]")) {
+      document.getElementById(node.dataset.target)?.replaceWith(node);
+    }
   }
 });

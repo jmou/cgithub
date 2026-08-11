@@ -143,7 +143,17 @@ interface CodeViewBlobRoute {
   richText: string | null;
 }
 
+interface SidebarAbout {
+  description?: string | null;
+  website?: string | null;
+  stargazerCount?: number;
+  forksCount?: number;
+  // A section is false when the repository has none of that thing.
+  sections?: { releases?: { releaseCount?: number } | false };
+}
+
 interface AppPayload {
+  sidebarAbout?: SidebarAbout;
   codeViewLayoutRoute?: CodeViewLayoutRoute;
   codeViewRepoRoute?: CodeViewRepoRoute;
   codeViewTreeRoute?: CodeViewTreeRoute;
@@ -230,8 +240,6 @@ export interface RepoInfo {
   stars: string | null;
   forks: string | null;
   numReleases?: number;
-  latestReleaseTag?: string;
-  latestReleaseDate?: string;
 }
 
 export interface GitHubRepo extends GitHubTree {
@@ -292,8 +300,14 @@ export interface Language {
   color: string | null;
 }
 
-export interface GitHubLanguages extends GitHubCommon {
+export interface LatestRelease {
+  tag: string;
+  publishedAt: string | null;
+}
+
+export interface GitHubSidebar extends GitHubCommon {
   languages: Language[];
+  latestRelease: LatestRelease | null;
 }
 
 export interface Ref {
@@ -425,81 +439,6 @@ function parsePayload(html: string): AppPayload | null {
   return parseEmbeddedPayload<AppPayload>(html);
 }
 
-function parseRepoInfo(html: string): RepoInfo {
-  const document = parseDocument(html);
-
-  const aboutSection = cssSelect.selectOne(".BorderGrid-cell h2:contains('About')", document);
-  let description: string | null = null;
-  let website: string | null = null;
-
-  if (aboutSection) {
-    const parent = aboutSection.parent;
-    if (parent) {
-      const descElem = cssSelect.selectOne("p.f4", parent);
-      if (descElem) {
-        description = textContent(descElem).trim();
-      }
-      const websiteElem = cssSelect.selectOne(
-        "a[rel='noopener noreferrer nofollow']",
-        parent,
-      ) as Element | null;
-      if (websiteElem) {
-        website = getAttributeValue(websiteElem, "href") || null;
-      }
-    }
-  }
-
-  const starsElem = cssSelect.selectOne("#repo-stars-counter-star", document) as Element | null;
-  const stars = starsElem
-    ? getAttributeValue(starsElem, "title") || textContent(starsElem).trim()
-    : null;
-
-  const forksElem = cssSelect.selectOne("#repo-network-counter", document) as Element | null;
-  const forks = forksElem
-    ? getAttributeValue(forksElem, "title") || textContent(forksElem).trim()
-    : null;
-
-  const releaseElem = cssSelect.selectOne(
-    "a[href$='/releases'] .Counter",
-    document,
-  ) as Element | null;
-  let numReleases: number | undefined;
-  let latestReleaseTag: string | undefined;
-  let latestReleaseDate: string | undefined;
-
-  if (releaseElem) {
-    const releaseText = getAttributeValue(releaseElem, "title") || textContent(releaseElem);
-    numReleases = parseInt(releaseText.replace(/,/g, ""), 10);
-
-    // Find the latest release tag and date if available
-    const cell = (releaseElem.parent as Element)?.parent?.parent as Element; // span -> a -> h2 -> cell
-    if (cell) {
-      const latestLink = cssSelect.selectOne("a[href*='/releases/tag/']", cell) as Element;
-      if (latestLink) {
-        const tagElem = cssSelect.selectOne(".css-truncate-target", latestLink);
-        if (tagElem) {
-          latestReleaseTag = textContent(tagElem).trim();
-        }
-
-        const timeElem = cssSelect.selectOne("relative-time", latestLink);
-        if (timeElem) {
-          latestReleaseDate = getAttributeValue(timeElem, "datetime") || undefined;
-        }
-      }
-    }
-  }
-
-  return {
-    description,
-    website,
-    stars,
-    forks,
-    numReleases,
-    latestReleaseTag,
-    latestReleaseDate,
-  };
-}
-
 function extractOverviewHtml(
   overviewFiles: OverviewFile[] = [],
 ): Record<string, string | null> | undefined {
@@ -539,7 +478,15 @@ export async function getGitHubRepo(owner: string, repo: string): Promise<GitHub
     throw new Error("Could not find tree data in embedded JSON");
   }
 
-  const info = parseRepoInfo(html);
+  const about = payload?.sidebarAbout;
+  const releases = about?.sections?.releases;
+  const info = {
+    description: about?.description ?? null,
+    website: about?.website ?? null,
+    stars: about?.stargazerCount?.toLocaleString("en-US") ?? null,
+    forks: about?.forksCount?.toLocaleString("en-US") ?? null,
+    numReleases: releases === false ? undefined : releases?.releaseCount,
+  };
   const overviewHtml = extractOverviewHtml(repoRoute.overview?.overviewFiles);
 
   return extractGitHub(payload, { items: repoRoute.tree.items, info, overviewHtml });
@@ -742,11 +689,16 @@ interface SidebarPayload {
       color?: string;
     }[];
   };
+  releases?: {
+    // The name is the release title, which need not be the tag; the path is.
+    latestRelease?: { name?: string; path: string; publishedAt?: string } | null;
+  };
 }
 
-// The repository sidebar (languages, contributors, ...) is not rendered into
-// the repo page at all; GitHub's own UI lazily fetches it as JSON from here.
-export async function getGitHubLanguages(owner: string, repo: string): Promise<GitHubLanguages> {
+// The repository sidebar (languages, releases, contributors, ...) is not
+// rendered into the repo page at all; GitHub's own UI lazily fetches it as
+// JSON from here.
+export async function getGitHubSidebar(owner: string, repo: string): Promise<GitHubSidebar> {
   const payload = await fetchGitHubJson<SidebarPayload>(`${owner}/${repo}/_sidebar`);
 
   const languages: Language[] = [];
@@ -758,7 +710,15 @@ export async function getGitHubLanguages(owner: string, repo: string): Promise<G
     });
   }
 
-  return { repo: { owner, name: repo }, languages };
+  const release = payload.releases?.latestRelease;
+  const latestRelease = release
+    ? {
+        tag: decodeURIComponent(release.path.split("/releases/tag/")[1] ?? release.name ?? ""),
+        publishedAt: release.publishedAt ?? null,
+      }
+    : null;
+
+  return { repo: { owner, name: repo }, languages, latestRelease };
 }
 
 interface BranchRefEntry {

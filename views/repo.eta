@@ -17,19 +17,13 @@
     <% if (it.info.numReleases) { %>
       <div class="detail">
         <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/releases"><%= it.info.numReleases %> releases</a>
-        <% if (it.info.latestReleaseTag) { %>
-          (<a href="/<%= it.repo.owner %>/<%= it.repo.name %>/releases/tag/<%= it.info.latestReleaseTag %>"><%= it.info.latestReleaseTag %></a>
-          <% if (it.info.latestReleaseDate) { %>
-            <time class="timestamp" title="<%= it.info.latestReleaseDate %>"><%= it.info.latestReleaseDate.split("T")[0] %></time>
-          <% } %>
-          )
-        <% } %>
+        <span id="latest-release"></span>
       </div>
     <% } %>
   </div>
 <% } %>
 
-<div class="placeholder languages box" data-src="/api/<%= it.repo.owner %>/<%= it.repo.name %>/languages">
+<div class="placeholder languages box" data-src="/api/<%= it.repo.owner %>/<%= it.repo.name %>/sidebar">
     <div class="language-bar"><span style="width: 100%; background: #ededed"></span></div>
     <ul class="language-list"><li>…</li></ul>
 </div>

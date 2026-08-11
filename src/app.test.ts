@@ -58,6 +58,40 @@ describe("branch picker", () => {
   });
 });
 
+describe("sidebar fragment", () => {
+  const repo = { owner: "actions", name: "deploy-pages" };
+  const languages = [{ name: "JavaScript", percentage: 100, color: "#f1e05a" }];
+  const latestRelease = { tag: "v5.0.0", publishedAt: "2026-03-25T16:59:14Z" };
+
+  // The release replaces the empty element it names, beside the release count.
+  it("should render the latest release and the languages", () => {
+    const html = eta.render("_sidebar.eta", { repo, languages, latestRelease });
+
+    assert.match(html, /<span data-target="latest-release">\(<a href/);
+    assert.match(html, /href="\/actions\/deploy-pages\/releases\/tag\/v5.0.0"/);
+    assert.match(html, /<time class="timestamp" title="2026-03-25T16:59:14Z">2026-03-25<\/time>/);
+    assert.match(html, /<div class="languages box">/);
+  });
+
+  it("should name a spot the repo page holds open", () => {
+    const html = eta.render("repo.eta", {
+      repo,
+      branch: "main",
+      path: "/",
+      items: [],
+      info: { description: null, website: null, stars: null, forks: null, numReleases: 38 },
+    });
+
+    assert.match(html, /<span id="latest-release"><\/span>/);
+  });
+
+  it("should render nothing when the repository has neither", () => {
+    const html = eta.render("_sidebar.eta", { repo, languages: [], latestRelease: null });
+
+    assert.strictEqual(html.trim(), "");
+  });
+});
+
 describe("redirects to GitHub", () => {
   // An HTTP redirect would be caught by the extension's declarativeNetRequest
   // rules and bounced straight back here.

@@ -1,3 +1,8 @@
+<% if (it.latestRelease) { %>
+  <span data-target="latest-release">(<a href="/<%= it.repo.owner %>/<%= it.repo.name %>/releases/tag/<%= it.latestRelease.tag %>"><%= it.latestRelease.tag %></a><%
+    if (it.latestRelease.publishedAt) { %> <time class="timestamp" title="<%= it.latestRelease.publishedAt %>"><%= it.latestRelease.publishedAt.split("T")[0] %></time><%
+    } %>)</span>
+<% } %>
 <% if (it.languages.length > 0) { %>
   <div class="languages box">
     <div class="language-bar">
