@@ -1,6 +1,7 @@
 cgithub is a lightweight GitHub alternative frontend. It has no bloated
-JavaScript and doesn't require API keys. To use it, host cgithub on your own
-server then replace `github.com` in your URL with your domain.
+JavaScript and doesn't require API keys. It runs on Cloudflare Workers; to use
+it, deploy your own instance then replace `github.com` in your URL with your
+domain.
 
 ## Development
 
@@ -16,42 +17,12 @@ $ pnpm test
 
 ## Deployment
 
-Assuming you have a server `jupiter`, you might deploy like:
+To deploy to Cloudflare Workers:
 ```
-$ pnpm run build
-$ rsync -av --del dist jupiter:/opt/cgithub
-```
-
-To configure systemd socket activation use a `cgithub.socket` file:
-```
-[Socket]
-ListenStream=/run/cgithub/socket
-SocketGroup=nginx
-SocketMode=0660
-
-[Install]
-WantedBy=sockets.target
+$ pnpm run deploy
 ```
 
-And a service file `cgithub.service`:
-```
-[Unit]
-After=cgithub.socket
-Requires=cgithub.socket
-
-[Service]
-Type=exec
-WorkingDirectory=/opt/cgithub
-ExecStart=/usr/bin/node dist/build/index.js
-DynamicUser=true
-```
-
-An nginx config snippet might be:
-```
-location / {
-    proxy_pass http://unix:/run/cgithub/socket;
-}
-```
+The worker name and other settings live in `wrangler.jsonc`.
 
 ## Disclosures
 

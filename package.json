@@ -5,14 +5,11 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "dev": "node --watch --watch-preserve-output src/index.ts",
-    "build": "rm -rf dist/* && esbuild --bundle --format=esm --platform=node --outdir=dist/build --sourcemap src/index.ts && cp -R public views dist/",
-    "test": "node --test --test-concurrency=4 src/scraper.test.ts",
-    "dev:cf": "node scripts/compile-views.ts && wrangler dev",
-    "deploy:cf": "node scripts/compile-views.ts && wrangler deploy"
+    "dev": "node scripts/compile-views.ts && wrangler dev",
+    "deploy": "node scripts/compile-views.ts && wrangler deploy",
+    "test": "node --test --test-concurrency=4 src/scraper.test.ts"
   },
   "dependencies": {
-    "@hono/node-server": "^1.13.7",
     "css-select": "^6.0.0",
     "domhandler": "^5.0.3",
     "domutils": "^3.2.2",
@@ -21,11 +18,10 @@
     "htmlparser2": "^10.1.0"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["esbuild", "workerd"]
+    "onlyBuiltDependencies": ["workerd"]
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
-    "esbuild": "^0.27.2",
     "prettier": "^3.8.1",
     "typescript": "^5.7.2",
     "wrangler": "^4.110.0"
