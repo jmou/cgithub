@@ -8,7 +8,7 @@
   <% } %>
   <div><%= it.size %></div>
   <div>
-    <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/raw/<%= it.branch %>/<%= it.path %>">Raw</a>
+    <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/raw/<%= it.branch %>/<%= it.path %>">View raw</a>
   </div>
 </div>
 
@@ -18,6 +18,8 @@
   <div class="box"><%~ it.htmlContent %></div>
 <% } else if (it.htmlLines) { %>
   <pre class="box"><code><%~ it.htmlLines.join("\n") %></code></pre>
-<% } else { %>
+<% } else if (it.textLines) { %>
   <pre class="box"><code><%= it.textLines.join("\n") %></code></pre>
+<% } else { %>
+  <div class="box">This file cannot be displayed</div>
 <% } %>

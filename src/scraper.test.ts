@@ -332,6 +332,24 @@ describe("GitHub scraper", () => {
       assert.strictEqual(data.htmlLines, null);
       assert.strictEqual(data.htmlContent, null);
     });
+
+    // A binary file GitHub has no preview for: no content of any kind, and the
+    // path exercises escaping of a space.
+    it("should support an unpreviewable binary file", async () => {
+      const data = await getGitHubBlob("justrajdeep", "fonts", "master", "Times New Roman.ttf");
+
+      assert.strictEqual(data.repo.owner, "justrajdeep");
+      assert.strictEqual(data.repo.name, "fonts");
+      assert.strictEqual(data.branch, "master");
+      assert.strictEqual(data.path, "Times New Roman.ttf");
+
+      assert.strictEqual(data.size, "815 KB");
+      assert.strictEqual(data.language, null);
+      assert.strictEqual(data.image, false);
+      assert.strictEqual(data.textLines, null);
+      assert.strictEqual(data.htmlLines, null);
+      assert.strictEqual(data.htmlContent, null);
+    });
   });
 
   describe("owner pages", () => {

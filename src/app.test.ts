@@ -92,6 +92,28 @@ describe("sidebar fragment", () => {
   });
 });
 
+describe("blob view", () => {
+  const blob = {
+    repo: { owner: "justrajdeep", name: "fonts" },
+    branch: "master",
+    path: "Times New Roman.ttf",
+    language: null,
+    size: "815 KB",
+    image: false,
+    textLines: null,
+    htmlLines: null,
+    htmlContent: null,
+  };
+
+  // GitHub previews neither the text nor the bytes of most binary files.
+  it("should offer the raw file when there is nothing to display", () => {
+    const html = eta.render("blob.eta", blob);
+
+    assert.match(html, /This file cannot be displayed\./);
+    assert.match(html, /href="\/justrajdeep\/fonts\/raw\/master\/Times New Roman.ttf">View raw/);
+  });
+});
+
 describe("redirects to GitHub", () => {
   // An HTTP redirect would be caught by the extension's declarativeNetRequest
   // rules and bounced straight back here.
