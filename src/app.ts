@@ -29,8 +29,16 @@ export function createApp(eta: Eta) {
   const app = new Hono();
 
   // Use a meta refresh to avoid redirect loops in certain situations; we become
-  // the initiator origin even if we are the target of a redirection.
+  // the initiator origin even if we are the target of a redirection. Requests
+  // coming from one of our own pages are already past that hazard, and are
+  // often subresources (an <img> in a rendered README) that can't do anything
+  // with an HTML page, so those get a real HTTP redirect.
   function redirectToGitHub(c: Context, location: string) {
+    const referer = c.req.header("Referer");
+    if (referer && URL.parse(referer)?.origin === new URL(c.req.url).origin) {
+      return c.redirect(location);
+    }
+
     c.header("Referrer-Policy", "no-referrer");
     return c.html(eta.render("redirect.eta", { location }));
   }

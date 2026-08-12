@@ -110,6 +110,26 @@ describe("redirects to GitHub", () => {
     assert.doesNotMatch(body, /<script/);
   });
 
+  // Same-origin requests are mostly subresources, which render an HTML page as
+  // a broken image rather than following its refresh.
+  it("should redirect over HTTP when the referer is one of our own pages", async () => {
+    const res = await app.request("http://cgithub.example/a/b/c?x=1", {
+      headers: { Referer: "http://cgithub.example/a/b" },
+    });
+
+    assert.strictEqual(res.status, 302);
+    assert.strictEqual(res.headers.get("location"), "https://github.com/a/b/c?x=1");
+  });
+
+  it("should use a meta refresh when the referer is another site", async () => {
+    const res = await app.request("http://cgithub.example/a/b/c?x=1", {
+      headers: { Referer: "https://github.example/a/b" },
+    });
+
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.headers.get("location"), null);
+  });
+
   it("should redirect unhandled search types", async () => {
     const res = await app.request(
       "http://cgithub.example/actions/deploy-pages/search?q=x&type=code",
