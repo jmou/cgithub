@@ -10,6 +10,7 @@ import {
   getGitHubLatestCommit,
   getGitHubOwner,
   getGitHubPulls,
+  getGitHubRaw,
   getGitHubRefs,
   getGitHubRelease,
   getGitHubReleases,
@@ -118,6 +119,31 @@ export function createApp(eta: Eta) {
       c,
       `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${path}`,
     );
+  });
+
+  // This is not a native GitHub route, but instead it lets us render blob
+  // content whose raw headers prevent hotlinking.
+  app.get("/:owner/:repo/embed/:type/:branch/:path{.*}", async (c) => {
+    const { owner, repo, type, branch, path } = c.req.param();
+
+    if (type !== "pdf") {
+      return c.notFound();
+    }
+
+    let response: Response;
+    try {
+      response = await getGitHubRaw(owner, repo, branch, path);
+    } catch (e) {
+      c.status(e instanceof GitHubHTTPError ? (e.status as StatusCode) : 500);
+      return c.body(null);
+    }
+
+    let contentType = response.headers.get("Content-Type");
+    if (contentType === null || contentType === "application/octet-stream") {
+      contentType = "application/pdf";
+    }
+
+    return new Response(response.body, { headers: { "Content-Type": contentType } });
   });
 
   app.get("/:owner/:repo/issues", async (c) => {

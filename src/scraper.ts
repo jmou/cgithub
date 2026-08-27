@@ -141,6 +141,7 @@ interface CodeViewBlobLayoutRouteStyledBlob {
 
 interface CodeViewBlobRoute {
   richText: string | null;
+  renderedFileInfo?: { renderFileType: string | null } | null;
 }
 
 interface SidebarAbout {
@@ -250,6 +251,7 @@ export interface GitHubBlob extends GitHubNav {
   language: string | null;
   size: string;
   image: boolean;
+  renderFileType: string | null;
   textLines: string[] | null;
   htmlLines: string[] | null;
   htmlContent: string | null;
@@ -378,15 +380,19 @@ export interface GitHubOwner {
   repos: OwnerRepo[];
 }
 
-async function fetchGitHubResponse(path: string, accept: string): Promise<Response> {
-  // GitHub throttles/blocks requests without realistic browser headers.
-  // These headers make the request appear as a standard browser visit.
-  const headers = {
+// GitHub throttles/blocks requests without realistic browser headers.
+// These headers make the request appear as a standard browser visit.
+function browserHeaders(accept: string): Record<string, string> {
+  return {
     "User-Agent":
       "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
     Accept: accept,
     "Accept-Language": "en-US,en;q=0.5",
   };
+}
+
+async function fetchGitHubResponse(path: string, accept: string): Promise<Response> {
+  const headers = browserHeaders(accept);
   const response = await fetch(`https://github.com/${path}`, { headers, redirect: "manual" });
   if (response.status === 301 || response.status === 302) {
     const location = response.headers.get("location");
@@ -546,10 +552,24 @@ export async function getGitHubBlob(
     language: blob.language || null,
     size,
     image: blob.image,
+    renderFileType: payload?.codeViewBlobRoute?.renderedFileInfo?.renderFileType ?? null,
     textLines: styledBlob?.rawLines ?? null,
     htmlLines,
     htmlContent: payload?.codeViewBlobRoute?.richText ?? null,
   });
+}
+
+// For proxying embeds.
+export async function getGitHubRaw(
+  owner: string,
+  repo: string,
+  branch: string,
+  path: string,
+): Promise<Response> {
+  const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${path}`;
+  const response = await fetch(url, { headers: browserHeaders("*/*") });
+  if (!response.ok) throw new GitHubHTTPError(response.status, response.statusText);
+  return response;
 }
 
 export async function getGitHubIssues(

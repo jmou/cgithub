@@ -1,6 +1,6 @@
 import assert from "node:assert";
 import path from "node:path";
-import { describe, it } from "node:test";
+import { describe, it, type TestContext } from "node:test";
 import { Eta } from "eta";
 import { createApp } from "./app.ts";
 
@@ -100,17 +100,81 @@ describe("blob view", () => {
     language: null,
     size: "815 KB",
     image: false,
+    renderFileType: null,
     textLines: null,
     htmlLines: null,
     htmlContent: null,
   };
 
-  // GitHub previews neither the text nor the bytes of most binary files.
+  it("should embed a PDF", () => {
+    const html = eta.render("blob.eta", {
+      ...blob,
+      path: "test/pdfs/basicapi.pdf",
+      renderFileType: "pdf",
+    });
+
+    assert.match(html, /<object[^>]*type="application\/pdf"/);
+    assert.match(html, /data="\/justrajdeep\/fonts\/embed\/pdf\/master\/test\/pdfs\/basicapi.pdf"/);
+  });
+
+  it("should not embed a file type it has no viewer for", () => {
+    const html = eta.render("blob.eta", { ...blob, renderFileType: "stl" });
+
+    assert.doesNotMatch(html, /<object/);
+    assert.match(html, /This file cannot be displayed\./);
+  });
+
   it("should offer the raw file when there is nothing to display", () => {
     const html = eta.render("blob.eta", blob);
 
     assert.match(html, /This file cannot be displayed\./);
     assert.match(html, /href="\/justrajdeep\/fonts\/raw\/master\/Times New Roman.ttf">View raw/);
+  });
+});
+
+describe("embedded files", () => {
+  function stubGitHub(t: TestContext, body: string, contentType: string, status = 200) {
+    t.mock.method(
+      globalThis,
+      "fetch",
+      async () => new Response(body, { status, headers: { "Content-Type": contentType } }),
+    );
+  }
+
+  it("should retype a PDF GitHub sends as a download", async (t) => {
+    stubGitHub(t, "%PDF-1.6", "application/octet-stream");
+
+    const res = await app.request("http://cgithub.example/mozilla/pdf.js/embed/pdf/master/doc.pdf");
+
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.headers.get("Content-Type"), "application/pdf");
+    assert.strictEqual(await res.text(), "%PDF-1.6");
+  });
+
+  it("should pass on a type GitHub already got right", async (t) => {
+    stubGitHub(t, "%PDF-1.6", "application/pdf");
+
+    const res = await app.request("http://cgithub.example/mozilla/pdf.js/embed/pdf/master/doc.pdf");
+
+    assert.strictEqual(res.headers.get("Content-Type"), "application/pdf");
+  });
+
+  it("should not serve a file type it has no viewer for", async (t) => {
+    stubGitHub(t, "<script>", "text/html");
+
+    const res = await app.request("http://cgithub.example/mozilla/pdf.js/embed/html/master/x.html");
+
+    assert.strictEqual(res.status, 404);
+  });
+
+  it("should pass on the status of a file GitHub does not have", async (t) => {
+    stubGitHub(t, "404: Not Found", "text/plain", 404);
+
+    const res = await app.request(
+      "http://cgithub.example/mozilla/pdf.js/embed/pdf/master/nope.pdf",
+    );
+
+    assert.strictEqual(res.status, 404);
   });
 });
 

@@ -14,6 +14,11 @@
 
 <% if (it.image) { %>
   <div class="box"><img src="/<%= it.repo.owner %>/<%= it.repo.name %>/raw/<%= it.branch %>/<%= it.path %>"></div>
+<% } else if (it.renderFileType === "pdf") { %>
+  <object class="box pdf" type="application/pdf"
+          data="/<%= it.repo.owner %>/<%= it.repo.name %>/embed/<%= it.renderFileType %>/<%= it.branch %>/<%= it.path %>">
+    This file cannot be displayed.
+  </object>
 <% } else if (it.htmlContent) { %>
   <div class="box"><%~ it.htmlContent %></div>
 <% } else if (it.htmlLines) { %>
@@ -21,5 +26,5 @@
 <% } else if (it.textLines) { %>
   <pre class="box"><code><%= it.textLines.join("\n") %></code></pre>
 <% } else { %>
-  <div class="box">This file cannot be displayed</div>
+  <div class="box">This file cannot be displayed.</div>
 <% } %>

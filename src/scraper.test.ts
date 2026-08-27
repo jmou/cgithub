@@ -7,6 +7,7 @@ import {
   getGitHubSidebar,
   getGitHubLatestCommit,
   getGitHubPulls,
+  getGitHubRaw,
   getGitHubRefs,
   getGitHubRelease,
   getGitHubReleases,
@@ -328,9 +329,39 @@ describe("GitHub scraper", () => {
       assert.strictEqual(data.size, "1.26 KB");
       assert.strictEqual(data.language, null);
       assert.strictEqual(data.image, true);
+      assert.strictEqual(data.renderFileType, null);
       assert.strictEqual(data.textLines, null);
       assert.strictEqual(data.htmlLines, null);
       assert.strictEqual(data.htmlContent, null);
+    });
+
+    // GitHub renders a PDF with a viewer of its own, so the page carries no
+    // content for it beyond the file type.
+    it("should support PDF", async () => {
+      const data = await getGitHubBlob("mozilla", "pdf.js", "master", "test/pdfs/basicapi.pdf");
+
+      assert.strictEqual(data.repo.owner, "mozilla");
+      assert.strictEqual(data.repo.name, "pdf.js");
+      assert.strictEqual(data.branch, "master");
+      assert.strictEqual(data.path, "test/pdfs/basicapi.pdf");
+
+      assert.strictEqual(data.size, "103 KB");
+      assert.strictEqual(data.language, null);
+      assert.strictEqual(data.image, false);
+      assert.strictEqual(data.renderFileType, "pdf");
+      assert.strictEqual(data.textLines, null);
+      assert.strictEqual(data.htmlLines, null);
+      assert.strictEqual(data.htmlContent, null);
+    });
+
+    // Why the embed route exists rather than the blob view pointing a viewer
+    // at GitHub: as application/octet-stream a browser downloads the file
+    // instead of displaying it.
+    it("should fetch a raw PDF that GitHub types as a download", async () => {
+      const response = await getGitHubRaw("mozilla", "pdf.js", "master", "test/pdfs/basicapi.pdf");
+
+      assert.strictEqual(response.headers.get("Content-Type"), "application/octet-stream");
+      assert.ok((await response.text()).startsWith("%PDF-"));
     });
 
     // A binary file GitHub has no preview for: no content of any kind, and the
@@ -346,6 +377,7 @@ describe("GitHub scraper", () => {
       assert.strictEqual(data.size, "815 KB");
       assert.strictEqual(data.language, null);
       assert.strictEqual(data.image, false);
+      assert.strictEqual(data.renderFileType, null);
       assert.strictEqual(data.textLines, null);
       assert.strictEqual(data.htmlLines, null);
       assert.strictEqual(data.htmlContent, null);

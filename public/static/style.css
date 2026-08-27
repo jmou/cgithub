@@ -276,6 +276,13 @@ body > footer {
   }
 }
 
+object.pdf {
+  display: block;
+  width: 100%;
+  height: 80vh;
+  padding: 0;
+}
+
 pre.box {
   /* Instead of scrolling overflow for long lines, grow the box. */
   width: fit-content;
