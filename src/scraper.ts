@@ -139,6 +139,10 @@ interface CodeViewBlobLayoutRouteStyledBlob {
   stylingDirectives: StylingDirective[][] | null;
 }
 
+interface CommitsRefRoute {
+  commitGroups: CommitGroup[];
+}
+
 interface CodeViewBlobRoute {
   richText: string | null;
   renderedFileInfo?: { renderFileType: string | null } | null;
@@ -161,7 +165,7 @@ interface AppPayload {
   codeViewBlobLayoutRoute?: CodeViewBlobLayoutRoute;
   "codeViewBlobLayoutRoute.StyledBlob"?: CodeViewBlobLayoutRouteStyledBlob;
   codeViewBlobRoute?: CodeViewBlobRoute;
-  commitGroups?: CommitGroup[];
+  commitsRefRoute?: CommitsRefRoute;
   // Actually there may be other query types.
   preloadedQueries?: IssueIndexPageQuery[];
 }
@@ -648,8 +652,9 @@ export async function getGitHubCommits(
   const html = await fetchGitHubPage(urlPath);
 
   const payload = parsePayload(html);
+  const commitsRoute = payload?.commitsRefRoute;
 
-  if (payload?.commitGroups === undefined) {
+  if (commitsRoute === undefined) {
     throw new Error("Could not find commit history in embedded JSON");
   }
 
@@ -660,7 +665,7 @@ export async function getGitHubCommits(
     },
     branch,
     path,
-    commitGroups: payload.commitGroups,
+    commitGroups: commitsRoute.commitGroups,
   };
 }
 
