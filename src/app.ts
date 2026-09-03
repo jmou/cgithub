@@ -1,7 +1,7 @@
 import type { Eta } from "eta";
 import { type Context, Hono } from "hono";
 import type { StatusCode } from "hono/utils/http-status";
-import { commit } from "./commit.generated.ts";
+import { buildCommit } from "./build.generated.ts";
 import {
   getGitHubBlob,
   getGitHubCommits,
@@ -22,7 +22,12 @@ import {
   RedirectError,
 } from "./scraper.ts";
 
-// Our URLs mirror GitHub's, so the same path there is the page we scraped.
+declare module "hono" {
+  interface ContextRenderer {
+    (template: string, data?: object): Response;
+  }
+}
+
 function githubUrlFor(c: Context) {
   const { pathname, search } = new URL(c.req.url);
   return `https://github.com${pathname}${search}`;
@@ -31,23 +36,36 @@ function githubUrlFor(c: Context) {
 export function createApp(eta: Eta) {
   const app = new Hono();
 
-  // Use a meta refresh to avoid redirect loops in certain situations; we become
-  // the initiator origin even if we are the target of a redirection. Requests
-  // coming from one of our own pages are already past that hazard, and are
-  // often subresources (an <img> in a rendered README) that can't do anything
-  // with an HTML page, so those get a real HTTP redirect.
-  function redirectToGitHub(c: Context, location: string) {
+  app.use(async (c, next) => {
+    // Include render data for layout.eta.
+    c.setRenderer((template, data) =>
+      c.html(eta.render(template, { ...data, githubUrl: githubUrlFor(c), buildCommit })),
+    );
+    await next();
+  });
+
+  // Redirect off-domain.
+  function redirectTo(c: Context, location: string) {
     const referer = c.req.header("Referer");
+    // If we are the referer, redirect directly so we can hotlink resources
+    // (e.g., <img> in README).
     if (referer && URL.parse(referer)?.origin === new URL(c.req.url).origin) {
+      c.header("Referrer-Policy", "no-referrer");
       return c.redirect(location);
     }
 
-    c.header("Referrer-Policy", "no-referrer");
-    return c.html(eta.render("redirect.eta", { location }));
+    // Otherwise use a meta refresh to make ourself the initiator. This will
+    // avoid redirect loops if we are part of excludedInitiatorDomains in a
+    // declarativeNetRequest.
+    return c.render("redirect.eta", { location });
+  }
+
+  function redirectToGitHub(c: Context) {
+    return redirectTo(c, githubUrlFor(c));
   }
 
   app.get("/", async (c) => {
-    return c.html(eta.render("home.eta", {}));
+    return c.render("home.eta");
   });
 
   async function tryRender<T extends object>(c: Context, template: string, promise: Promise<T>) {
@@ -57,19 +75,19 @@ export function createApp(eta: Eta) {
     } catch (e) {
       if (e instanceof RedirectError) {
         if (e.location.startsWith("https://")) {
-          return redirectToGitHub(c, e.location);
+          return redirectTo(c, e.location);
         }
         return c.redirect(e.location);
       } else if (e instanceof GitHubHTTPError) {
         c.status(e.status as StatusCode);
         const message = `GitHub responded with HTTP ${e.status} ${e.message}`;
-        return c.html(eta.render("error.eta", { title: e.message, message }));
+        return c.render("error.eta", { title: e.message, message });
       } else {
         c.status(500);
-        return c.html(eta.render("error.eta", { message: "" + e }));
+        return c.render("error.eta", { message: "" + e });
       }
     }
-    return c.html(eta.render(template, { ...data, githubUrl: githubUrlFor(c), commit }));
+    return c.render(template, data);
   }
 
   // For fragments fetched asynchronously by client-side JS (see public/static/refs.js):
@@ -92,7 +110,7 @@ export function createApp(eta: Eta) {
       c.status(status);
       return c.body(null);
     }
-    return c.html(eta.render(template, data));
+    return c.render(template, data);
   }
 
   app.get("/:owner", async (c) => {
@@ -117,10 +135,7 @@ export function createApp(eta: Eta) {
 
   app.get("/:owner/:repo/raw/:branch/:path{.*}", async (c) => {
     const { owner, repo, branch, path } = c.req.param();
-    return redirectToGitHub(
-      c,
-      `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${path}`,
-    );
+    return redirectTo(c, `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${path}`);
   });
 
   // This is not a native GitHub route, but instead it lets us render blob
@@ -165,7 +180,7 @@ export function createApp(eta: Eta) {
   app.get("/:owner/:repo/wiki/:page/:oid", async (c) => {
     const { owner, repo, page, oid } = c.req.param();
     if (page.startsWith("_") || !/^[0-9a-f]{40}$/.test(oid)) {
-      return redirectToGitHub(c, githubUrlFor(c));
+      return redirectToGitHub(c);
     }
     return tryRender(c, "wiki.eta", getGitHubWiki(owner, repo, page, oid));
   });
@@ -173,7 +188,7 @@ export function createApp(eta: Eta) {
   app.get("/:owner/:repo/wiki/:page", async (c) => {
     const { owner, repo, page } = c.req.param();
     if (page.startsWith("_")) {
-      return redirectToGitHub(c, githubUrlFor(c));
+      return redirectToGitHub(c);
     }
     return tryRender(c, "wiki.eta", getGitHubWiki(owner, repo, page));
   });
@@ -209,7 +224,7 @@ export function createApp(eta: Eta) {
     }
 
     // Redirect unhandled search types (like code, which requires sign in anyway).
-    return redirectToGitHub(c, githubUrlFor(c));
+    return redirectToGitHub(c);
   });
 
   app.get("/:owner/:repo/commits/:branch/:path{.*}?", async (c) => {
@@ -260,7 +275,7 @@ export function createApp(eta: Eta) {
   });
 
   app.all("*", async (c) => {
-    return redirectToGitHub(c, githubUrlFor(c));
+    return redirectToGitHub(c);
   });
 
   return app;

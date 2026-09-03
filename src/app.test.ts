@@ -195,7 +195,10 @@ describe("commit history", () => {
 
     assert.match(html, /href="\/actions\/deploy-pages\/commits\/main">\(top\)</);
     assert.match(html, /href="\/actions\/deploy-pages\/commits\/main\/src">src</);
-    assert.match(html, /href="\/actions\/deploy-pages\/commits\/main\/src\/lib">lib<\/a>\/index\.js/);
+    assert.match(
+      html,
+      /href="\/actions\/deploy-pages\/commits\/main\/src\/lib">lib<\/a>\/index\.js/,
+    );
   });
 
   it("should say so when a path has no history", () => {
@@ -363,9 +366,9 @@ describe("redirects to GitHub", () => {
 
     assert.strictEqual(res.status, 200);
     assert.strictEqual(res.headers.get("location"), null);
-    assert.strictEqual(res.headers.get("Referrer-Policy"), "no-referrer");
 
     const body = await res.text();
+    assert.match(body, /<meta name="referrer" content="no-referrer">/);
     assert.match(
       body,
       /<meta http-equiv="refresh" content="1; url=https:\/\/github.com\/a\/b\/c\?x=1">/,
@@ -382,6 +385,7 @@ describe("redirects to GitHub", () => {
 
     assert.strictEqual(res.status, 302);
     assert.strictEqual(res.headers.get("location"), "https://github.com/a/b/c?x=1");
+    assert.strictEqual(res.headers.get("Referrer-Policy"), "no-referrer");
   });
 
   it("should use a meta refresh when the referer is another site", async () => {

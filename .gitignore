@@ -1,4 +1,4 @@
 /node_modules/
 /.wrangler/
-/src/commit.generated.ts
+/src/build.generated.ts
 /src/views.generated.ts
