@@ -37,7 +37,7 @@ describe("GitHub scraper", () => {
       assert.strictEqual(data.info.website, "https://pages.github.com");
       assert.strictEqual(data.info.stars?.length, 3);
       assert.strictEqual(data.info.forks?.length, 3);
-      assert.strictEqual(data.info.numReleases, 38);
+      assert.strictEqual(data.info.numReleases, 39);
 
       assert.ok(data.items.length > 0);
       assert.ok(typeof data.overviewHtml?.["README.md"] === "string");
@@ -94,7 +94,7 @@ describe("GitHub scraper", () => {
       assert.strictEqual(data.branch, "main");
       assert.strictEqual(data.path, "README.md");
 
-      assert.strictEqual(data.size, "8.95 KB / 133 lines / 94 loc");
+      assert.strictEqual(data.size, "9.12 KB / 133 lines / 94 loc");
       assert.strictEqual(data.language, "Markdown");
       assert.strictEqual(data.image, false);
 
@@ -231,8 +231,8 @@ describe("GitHub scraper", () => {
         { name: "JavaScript", percentage: 100, color: "#f1e05a" },
       ]);
 
-      assert.strictEqual(data.latestRelease?.tag, "v5.0.0");
-      assert.ok(data.latestRelease?.publishedAt?.startsWith("2026-03-25"));
+      assert.strictEqual(data.latestRelease?.tag, "v5.0.1");
+      assert.ok(data.latestRelease?.publishedAt?.startsWith("2026-09-01"));
     });
 
     it("should fetch the sidebar for a multi-language repository", async () => {
