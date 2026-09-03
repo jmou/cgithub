@@ -14,6 +14,8 @@ import {
   getGitHubRepo,
   getGitHubOwner,
   getGitHubTree,
+  getGitHubWiki,
+  getGitHubWikiPages,
   GitHubHTTPError,
   RedirectError,
 } from "./scraper.ts";
@@ -381,6 +383,84 @@ describe("GitHub scraper", () => {
       assert.strictEqual(data.textLines, null);
       assert.strictEqual(data.htmlLines, null);
       assert.strictEqual(data.htmlContent, null);
+    });
+  });
+
+  describe("wikis", () => {
+    it("should fetch the home page a wiki serves off /wiki itself", async () => {
+      const data = await getGitHubWiki("microsoft", "vscode");
+
+      assert.strictEqual(data.repo.owner, "microsoft");
+      assert.strictEqual(data.repo.name, "vscode");
+      assert.strictEqual(data.title, "Home");
+      assert.strictEqual(data.updatedBy, "Greg Van Liew");
+      assert.strictEqual(data.updatedAt, "2019-11-22T03:08:32Z");
+
+      assert.match(data.bodyHtml, /Welcome to the Visual Studio Code Wiki/);
+      // The _Sidebar and _Footer pages this wiki defines.
+      assert.match(data.sidebarHtml ?? "", /href="\/microsoft\/vscode\/wiki\/Roadmap"/);
+      assert.match(data.footerHtml ?? "", /Want to contribute to this Wiki\?/);
+    });
+
+    it("should fetch a page by its slug", async () => {
+      const data = await getGitHubWiki("microsoft", "vscode", "Commit-Signing");
+
+      assert.strictEqual(data.title, "Commit Signing");
+      assert.match(data.bodyHtml, /GPG/);
+    });
+
+    // The slug arrives from our route already decoded, so it has to be encoded
+    // again rather than interpolated into the URL as-is.
+    it("should fetch a page whose slug is not path-safe", async () => {
+      const data = await getGitHubWiki(
+        "microsoft",
+        "vscode",
+        "[DEV]-Perf-Tools-for-VS-Code-Development",
+      );
+
+      assert.strictEqual(data.title, "[DEV] Perf Tools for VS Code Development");
+      assert.ok(data.bodyHtml.length > 0);
+    });
+
+    it("should fetch an older revision of a page", async () => {
+      const oid = "f1c60035ba38b68ba383f58e482c312218daf86c";
+      const data = await getGitHubWiki("microsoft", "vscode", "Commit-Signing", oid);
+
+      assert.strictEqual(data.title, "Commit Signing");
+      assert.strictEqual(data.updatedBy, "Joaqu\u00edn Ruales");
+      assert.strictEqual(data.updatedAt, "2025-10-17T15:07:14Z");
+    });
+
+    // The sidebar list is complete; its "Show N more pages…" button only
+    // unhides the rest, so no second request is needed to link every page.
+    it("should collect every page from the sidebar of any page", async () => {
+      const data = await getGitHubWiki("microsoft", "vscode");
+
+      assert.ok(data.pages.length > 15);
+      assert.deepStrictEqual(data.pages[0], { name: "Home", href: "/microsoft/vscode/wiki" });
+      assert.ok(data.pages.some((page) => page.href === "/microsoft/vscode/wiki/Commit-Signing"));
+    });
+
+    // An archived repository, so neither its wiki nor these dates can move.
+    it("should fetch the page index with its last-updated dates", async () => {
+      const data = await getGitHubWikiPages("ariya", "phantomjs");
+
+      assert.strictEqual(data.repo.owner, "ariya");
+      assert.ok(data.pages.length > 1);
+      assert.ok(data.pages.every((page) => page.updatedAt));
+
+      const home = data.pages.find((page) => page.name === "Home");
+      assert.ok(home);
+      assert.strictEqual(home.href, "/ariya/phantomjs/wiki");
+      assert.strictEqual(home.updatedAt, "2018-02-08T18:57:56Z");
+    });
+
+    it("should redirect to the repository when it has no wiki", async () => {
+      await assert.rejects(getGitHubWiki("git", "git"), (err) => {
+        assert(err instanceof RedirectError, "error should be a RedirectError");
+        assert.strictEqual(err.location, "/git/git");
+        return true;
+      });
     });
   });
 

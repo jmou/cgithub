@@ -16,6 +16,8 @@ import {
   getGitHubReleases,
   getGitHubRepo,
   getGitHubTree,
+  getGitHubWiki,
+  getGitHubWikiPages,
   GitHubHTTPError,
   RedirectError,
 } from "./scraper.ts";
@@ -144,6 +146,36 @@ export function createApp(eta: Eta) {
     }
 
     return new Response(response.body, { headers: { "Content-Type": contentType } });
+  });
+
+  // GitHub's own wiki URLs, in the order it resolves them: names beginning with
+  // an underscore are reserved for its actions (_pages, _new, _edit, ...), so a
+  // page can never be mistaken for one.
+  app.get("/:owner/:repo/wiki", async (c) => {
+    const { owner, repo } = c.req.param();
+    return tryRender(c, "wiki.eta", getGitHubWiki(owner, repo));
+  });
+
+  app.get("/:owner/:repo/wiki/_pages", async (c) => {
+    const { owner, repo } = c.req.param();
+    return tryRender(c, "wikiPages.eta", getGitHubWikiPages(owner, repo));
+  });
+
+  // An older revision of a page renders exactly like its current one.
+  app.get("/:owner/:repo/wiki/:page/:oid", async (c) => {
+    const { owner, repo, page, oid } = c.req.param();
+    if (page.startsWith("_") || !/^[0-9a-f]{40}$/.test(oid)) {
+      return redirectToGitHub(c, githubUrlFor(c));
+    }
+    return tryRender(c, "wiki.eta", getGitHubWiki(owner, repo, page, oid));
+  });
+
+  app.get("/:owner/:repo/wiki/:page", async (c) => {
+    const { owner, repo, page } = c.req.param();
+    if (page.startsWith("_")) {
+      return redirectToGitHub(c, githubUrlFor(c));
+    }
+    return tryRender(c, "wiki.eta", getGitHubWiki(owner, repo, page));
   });
 
   app.get("/:owner/:repo/issues", async (c) => {

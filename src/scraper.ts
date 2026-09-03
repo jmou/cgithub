@@ -1,5 +1,5 @@
 import { parseDocument } from "htmlparser2";
-import { type AnyNode, type Element } from "domhandler";
+import { isText, type AnyNode, type Element } from "domhandler";
 import { getAttributeValue, getInnerHTML, textContent } from "domutils";
 import * as cssSelect from "css-select";
 
@@ -350,6 +350,26 @@ export interface GitHubReleases extends GitHubCommon {
 
 export interface GitHubRelease extends GitHubCommon {
   release: Release;
+}
+
+export interface WikiPage {
+  name: string;
+  href: string;
+  updatedAt?: string;
+}
+
+export interface GitHubWiki extends GitHubCommon {
+  title: string;
+  updatedBy: string | null;
+  updatedAt: string | null;
+  bodyHtml: string;
+  sidebarHtml: string | null;
+  footerHtml: string | null;
+  pages: WikiPage[];
+}
+
+export interface GitHubWikiPages extends GitHubCommon {
+  pages: WikiPage[];
 }
 
 interface OwnerRepo {
@@ -1108,4 +1128,97 @@ export async function getGitHubOwner(owner: string): Promise<GitHubOwner> {
   }
   // Not a profile page (marketing pages like github.com/features, etc.).
   throw new RedirectError(`https://github.com/${owner}`);
+}
+
+// The text directly inside an element, ignoring any nested elements' text.
+function directText(elem: Element): string {
+  return elem.children
+    .filter(isText)
+    .map((node) => node.data)
+    .join("")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+// The sidebar holds every wiki page, which are revealed by JavaScript.
+function parseWikiSidebarPages(document: AnyNode): WikiPage[] {
+  const pages: WikiPage[] = [];
+  const anchors = cssSelect.selectAll(
+    ".js-wiki-sidebar-page-container > div > a[href]",
+    document,
+  ) as unknown as Element[];
+  for (const anchor of anchors) {
+    const href = getAttributeValue(anchor, "href");
+    const name = textContent(anchor).replace(/\s+/g, " ").trim();
+    if (href && name) pages.push({ name, href });
+  }
+  return pages;
+}
+
+function wikiHtml(selector: string, document: AnyNode): string | null {
+  const elem = cssSelect.selectOne(selector, document);
+  if (!elem) return null;
+  const html = getInnerHTML(elem).trim();
+  return html || null;
+}
+
+export async function getGitHubWiki(
+  owner: string,
+  repo: string,
+  // Empty for the wiki's home page, which GitHub serves off /wiki itself.
+  page = "",
+  // A revision SHA renders that older version of the page.
+  oid = "",
+): Promise<GitHubWiki> {
+  // Page names keep characters that are not path-safe (C#, [DEV] ...), so the
+  // slug has to be re-encoded rather than interpolated the way a ref is.
+  const path = [`${owner}/${repo}/wiki`, page && encodeURIComponent(page), oid]
+    .filter(Boolean)
+    .join("/");
+  const html = await fetchGitHubPage(path);
+  const document = parseDocument(html);
+
+  const heading = cssSelect.selectOne("h1.gh-header-title", document) as Element | null;
+  if (!heading) {
+    throw new Error("Could not find the wiki page heading");
+  }
+
+  // "<author> edited this page <date> · <n> revisions", where the author is the
+  // only part not wrapped in an element of its own.
+  const meta = cssSelect.selectOne(".gh-header-meta", document) as Element | null;
+  const updatedBy = meta ? (/^(.+?) edited this page\b/.exec(directText(meta))?.[1] ?? null) : null;
+  const time = meta ? cssSelect.selectOne("relative-time", meta) : null;
+
+  return {
+    repo: { owner, name: repo },
+    title: directText(heading),
+    updatedBy,
+    updatedAt: time ? getAttributeValue(time, "datetime") || null : null,
+    bodyHtml: wikiHtml("#wiki-body .markdown-body", document) ?? "",
+    // Wikis can define _Sidebar and _Footer pages, rendered alongside every page.
+    sidebarHtml: wikiHtml(".wiki-custom-sidebar", document),
+    footerHtml: wikiHtml("#wiki-footer .markdown-body", document),
+    pages: parseWikiSidebarPages(document),
+  };
+}
+
+export async function getGitHubWikiPages(owner: string, repo: string): Promise<GitHubWikiPages> {
+  const html = await fetchGitHubPage(`${owner}/${repo}/wiki/_pages`);
+  const document = parseDocument(html);
+
+  const pages: WikiPage[] = [];
+  for (const row of cssSelect.selectAll(
+    "#wiki-content li.Box-row",
+    document,
+  ) as unknown as Element[]) {
+    const anchor = cssSelect.selectOne("a[href]", row) as Element | null;
+    const href = anchor ? getAttributeValue(anchor, "href") : undefined;
+    const name = anchor ? textContent(anchor).replace(/\s+/g, " ").trim() : "";
+    if (!href || !name) continue;
+
+    const time = cssSelect.selectOne("relative-time", row) as Element | null;
+    pages.push({ name, href, updatedAt: time ? getAttributeValue(time, "datetime") : undefined });
+  }
+
+  return { repo: { owner, name: repo }, pages };
 }

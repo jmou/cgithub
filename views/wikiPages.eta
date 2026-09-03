@@ -1,0 +1,16 @@
+<% layout("./layout.eta"); it.path = "wiki/_pages" %>
+
+<%~ include("./_wikiNav.eta", it) %>
+
+<table>
+  <% for (const page of it.pages) { %>
+    <tr>
+      <td><a href="<%= page.href %>"><%= page.name %></a></td>
+      <td class="timestamp">
+        <% if (page.updatedAt) { %>
+          <time title="<%= page.updatedAt %>"><%= page.updatedAt.split("T")[0] %></time>
+        <% } %>
+      </td>
+    </tr>
+  <% } %>
+</table>

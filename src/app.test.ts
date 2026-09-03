@@ -178,6 +178,104 @@ describe("embedded files", () => {
   });
 });
 
+describe("wiki", () => {
+  const repo = { owner: "ariya", name: "phantomjs" };
+  const page = {
+    repo,
+    title: "Home",
+    updatedBy: "pixiuPL",
+    updatedAt: "2018-02-08T18:57:56Z",
+    bodyHtml: "<p>New to <strong>PhantomJS</strong>?</p>",
+    sidebarHtml: null,
+    footerHtml: null,
+    pages: [
+      { name: "Home", href: "/ariya/phantomjs/wiki" },
+      { name: "API Reference WebPage", href: "/ariya/phantomjs/wiki/API-Reference-WebPage" },
+    ],
+  };
+
+  it("should render the page beside who last edited it", () => {
+    const html = eta.render("wiki.eta", page);
+
+    assert.match(html, /<p>New to <strong>PhantomJS<\/strong>\?<\/p>/);
+    assert.match(html, /pixiuPL edited this page/);
+    assert.match(html, /<time title="2018-02-08T18:57:56Z">2018-02-08<\/time>/);
+  });
+
+  // The _Sidebar and _Footer pages a wiki can define, which GitHub renders
+  // alongside every page rather than as pages of their own.
+  it("should render the sidebar and footer only when the wiki has them", () => {
+    // The page's own content is the last thing in its box, and the box is the
+    // only one on the page.
+    const bare = eta.render("wiki.eta", page);
+    assert.match(bare, /New to <strong>PhantomJS<\/strong>\?<\/p>\s*<\/div>/);
+    assert.doesNotMatch(bare, /Sidebar/);
+
+    const html = eta.render("wiki.eta", {
+      ...page,
+      sidebarHtml: "<ul><li>nav</li></ul>",
+      footerHtml: "<p>fine print</p>",
+    });
+    assert.match(html, /<footer>\s*<p>fine print<\/p>/);
+    assert.match(html, /<header><span>Sidebar<\/span><\/header>\s*<ul><li>nav<\/li><\/ul>/);
+  });
+
+  it("should link every page of the wiki", () => {
+    const html = eta.render("wiki.eta", page);
+
+    assert.match(html, /<summary>2 pages<\/summary>/);
+    assert.match(
+      html,
+      /href="\/ariya\/phantomjs\/wiki\/API-Reference-WebPage">API Reference WebPage/,
+    );
+  });
+
+  it("should list the pages with when each was last updated", () => {
+    const html = eta.render("wikiPages.eta", {
+      repo,
+      pages: [
+        {
+          name: "Home",
+          href: "/ariya/phantomjs/wiki",
+          updatedAt: "2018-02-08T18:57:56Z",
+        },
+      ],
+    });
+
+    assert.match(html, /href="\/ariya\/phantomjs\/wiki">Home/);
+    assert.match(html, /<time title="2018-02-08T18:57:56Z">2018-02-08<\/time>/);
+  });
+
+  // The editor and the timestamp are scraped independently, so a page missing
+  // one of them should still show the other.
+  it("should render each part of the header meta it has", () => {
+    assert.doesNotMatch(eta.render("wiki.eta", { ...page, updatedAt: null }), /<time/);
+    assert.match(eta.render("wiki.eta", { ...page, updatedAt: null }), /pixiuPL edited this page/);
+    assert.doesNotMatch(eta.render("wiki.eta", { ...page, updatedBy: null }), /edited this page/);
+  });
+
+  // GitHub reserves underscore-prefixed names for its own actions, so a page
+  // can never be one; the rest of them are for signed-in users only.
+  it("should not scrape a reserved wiki name as a page", async () => {
+    const reserved = ["/ariya/phantomjs/wiki/_new", "/ariya/phantomjs/wiki/Home/_edit"];
+    for (const path of reserved) {
+      const res = await app.request(`http://cgithub.example${path}`);
+
+      assert.strictEqual(res.status, 200);
+      assert.match(await res.text(), new RegExp(`url=https://github.com${path}"`));
+    }
+  });
+
+  it("should only read a revision off a path that names one", async () => {
+    const res = await app.request("http://cgithub.example/ariya/phantomjs/wiki/Home/latest");
+
+    assert.match(
+      await res.text(),
+      /url=https:\/\/github.com\/ariya\/phantomjs\/wiki\/Home\/latest"/,
+    );
+  });
+});
+
 describe("redirects to GitHub", () => {
   // An HTTP redirect would be caught by the extension's declarativeNetRequest
   // rules and bounced straight back here.

@@ -1,0 +1,4 @@
+<nav>
+  <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/wiki">Wiki home</a>
+  <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/wiki/_pages">Pages</a>
+</nav>

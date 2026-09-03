@@ -33,6 +33,9 @@ pnpm test
 - `GET /:owner/:repo` - Repository info with directory listing
 - `GET /:owner/:repo/tree/:branch/:path*` - Directory listing
 - `GET /:owner/:repo/blob/:branch/:path` - File content view
+- `GET /:owner/:repo/wiki` - Wiki home page
+- `GET /:owner/:repo/wiki/:page` - Wiki page (also `/:page/:oid` for a revision)
+- `GET /:owner/:repo/wiki/_pages` - Wiki page index
 
 ## Instructions
 

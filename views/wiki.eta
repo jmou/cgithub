@@ -1,0 +1,37 @@
+<% layout("./layout.eta"); it.path = "wiki/" + it.title %>
+
+<%~ include("./_wikiNav.eta", it) %>
+
+<div class="box wiki">
+  <header>
+    <span><%= it.title %></span>
+    <% if (it.updatedBy || it.updatedAt) { %>
+      <span class="timestamp">
+        <% if (it.updatedBy) { %><%= it.updatedBy %> edited this page<% } %>
+        <% if (it.updatedAt) { %><time title="<%= it.updatedAt %>"><%= it.updatedAt.split("T")[0] %></time><% } %>
+      </span>
+    <% } %>
+  </header>
+  <%~ it.bodyHtml %>
+  <% if (it.footerHtml) { %>
+    <footer><%~ it.footerHtml %></footer>
+  <% } %>
+</div>
+
+<% if (it.sidebarHtml) { %>
+  <div class="box wiki">
+    <header><span>Sidebar</span></header>
+    <%~ it.sidebarHtml %>
+  </div>
+<% } %>
+
+<% if (it.pages.length > 0) { %>
+  <details class="box wiki-pages">
+    <summary><%= it.pages.length %> page<%= it.pages.length === 1 ? "" : "s" %></summary>
+    <ul>
+      <% for (const page of it.pages) { %>
+        <li><a href="<%= page.href %>"><%= page.name %></a></li>
+      <% } %>
+    </ul>
+  </details>
+<% } %>

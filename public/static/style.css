@@ -288,7 +288,7 @@ pre.box {
   width: fit-content;
 }
 
-.overview, .release {
+.overview, .release, .wiki {
   overflow-wrap: break-word;
 
   /* This is a bit convoluted: we want the effect of padding but using margins
@@ -332,12 +332,29 @@ pre.box {
   font-weight: bold;
 }
 
-.release > header {
+.release > header, .wiki > header {
   display: flex;
   align-items: baseline;
   > :first-child {
     flex-grow: 1;
     font-weight: bold;
+  }
+}
+
+.wiki > footer {
+  /* The wiki's _Footer page is rendered content, not a caption for the page. */
+  font-size: .9rem;
+}
+
+.wiki-pages {
+  summary {
+    cursor: pointer;
+  }
+
+  ul {
+    columns: 16rem;
+    list-style: none;
+    padding: 0;
   }
 }
 
