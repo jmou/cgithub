@@ -195,6 +195,39 @@ describe("GitHub scraper", () => {
       assert.ok(data.commitGroups.length > 0);
     });
 
+    // GitHub serves a file's history from the same route as a directory's.
+    it("should fetch the history of a blob", async () => {
+      const data = await getGitHubCommits("actions", "deploy-pages", "main", "src/index.js");
+
+      assert.strictEqual(data.path, "src/index.js");
+
+      assert.ok(data.commitGroups.length > 0);
+      const commit = data.commitGroups[0].commits[0];
+      assert.strictEqual(commit.oid.length, 40);
+      assert.ok(commit.shortMessage.length > 0);
+    });
+
+    // What a history page's "Browse" link resolves to: the file as it stood at
+    // one of its commits. Nothing in a commits payload says whether the path is
+    // a file or a directory, so those links all point at the tree and rely on
+    // GitHub redirecting a file's to its blob.
+    it("should redirect a blob browsed at a commit to its blob view", async () => {
+      const oid = "b39c421b98f49d83ae50ec502c3ddfc3bf28f2c6";
+
+      await assert.rejects(getGitHubTree("actions", "deploy-pages", oid, "src/index.js"), (err) => {
+        assert(err instanceof RedirectError, "error should be a RedirectError");
+        assert.strictEqual(err.location, `/actions/deploy-pages/blob/${oid}/src/index.js`);
+        return true;
+      });
+
+      const data = await getGitHubBlob("actions", "deploy-pages", oid, "src/index.js");
+
+      assert.strictEqual(data.branch, oid);
+      assert.strictEqual(data.path, "src/index.js");
+      assert.strictEqual(data.size, "1.37 KB / 51 lines / 40 loc");
+      assert.strictEqual(data.textLines?.length, 51);
+    });
+
     it("should fetch releases", async () => {
       const data = await getGitHubReleases("actions", "deploy-pages");
 

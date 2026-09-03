@@ -2,6 +2,12 @@
 
 <%~ include("./_nav.eta", {...it, view: "commits"}) %>
 
+<% const pathSuffix = it.path && it.path !== "/" ? "/" + it.path : "" %>
+
+<% if (it.commitGroups.length === 0) { %>
+  <div class="box">No commits found.</div>
+<% } %>
+
 <% for (const group of it.commitGroups) { %>
   <h3><%= group.title %></h3>
   <% for (const commit of group.commits) { %>
@@ -19,6 +25,8 @@
       </div>
       <div class="commit-sha">
         <code><%= commit.oid.substring(0, 7) %></code>
+        <% /* Like GitHub, blindly link to blob and redirect for trees */ %>
+        <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/blob/<%= commit.oid %><%= pathSuffix %>">Browse</a>
       </div>
     </div>
   <% } %>

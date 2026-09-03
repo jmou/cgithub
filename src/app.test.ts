@@ -155,6 +155,62 @@ describe("blob view", () => {
   });
 });
 
+describe("commit history", () => {
+  const repo = { owner: "actions", name: "deploy-pages" };
+  const oid = "b39c421b98f49d83ae50ec502c3ddfc3bf28f2c6";
+  const commitGroups = [
+    {
+      title: "Apr 18, 2023",
+      commits: [
+        { oid, shortMessage: "Remove deprecated input parameters", authors: [{ login: "jmg" }] },
+      ],
+    },
+  ];
+  const history = { repo, branch: "main", path: "src/index.js", commitGroups };
+
+  // A commits payload never says whether its path is a file or a directory, so
+  // every link goes to the tree and GitHub redirects a file's to its blob.
+  it("should browse a file's history at each of its commits", () => {
+    const html = eta.render("commits.eta", history);
+
+    assert.match(html, new RegExp(`href="/actions/deploy-pages/blob/${oid}/src/index.js">Browse`));
+  });
+
+  it("should browse a directory's history the same way", () => {
+    const html = eta.render("commits.eta", { ...history, path: "src" });
+
+    assert.match(html, new RegExp(`href="/actions/deploy-pages/blob/${oid}/src">Browse`));
+  });
+
+  it("should browse the whole repository when the history has no path", () => {
+    const html = eta.render("commits.eta", { ...history, path: "" });
+
+    assert.match(html, new RegExp(`href="/actions/deploy-pages/blob/${oid}">Browse`));
+  });
+
+  // Walking up from a history stays in the history, and its last crumb is the
+  // page you are already on, just as a blob or a tree ends on itself.
+  it("should walk up through the history of each parent directory", () => {
+    const html = eta.render("commits.eta", { ...history, path: "src/lib/index.js" });
+
+    assert.match(html, /href="\/actions\/deploy-pages\/commits\/main">\(top\)</);
+    assert.match(html, /href="\/actions\/deploy-pages\/commits\/main\/src">src</);
+    assert.match(html, /href="\/actions\/deploy-pages\/commits\/main\/src\/lib">lib<\/a>\/index\.js/);
+  });
+
+  it("should say so when a path has no history", () => {
+    const html = eta.render("commits.eta", { ...history, commitGroups: [] });
+
+    assert.match(html, /No commits found\./);
+  });
+
+  it("should link a blob to its own history", () => {
+    const html = eta.render("blob.eta", { ...history, textLines: ["x"] });
+
+    assert.match(html, /href="\/actions\/deploy-pages\/commits\/main\/src\/index.js">History/);
+  });
+});
+
 describe("embedded files", () => {
   function stubGitHub(t: TestContext, body: string, contentType: string, status = 200) {
     t.mock.method(

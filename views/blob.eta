@@ -8,6 +8,9 @@
   <% } %>
   <div><%= it.size %></div>
   <div>
+    <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/commits/<%= it.branch %>/<%= it.path %>">History</a>
+  </div>
+  <div>
     <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/raw/<%= it.branch %>/<%= it.path %>">View raw</a>
   </div>
 </div>

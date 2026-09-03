@@ -14,7 +14,10 @@
     <div class="ref-selector-list">Loading…</div>
   </dialog>
   <% if (it.path && it.path !== "/") { %>
-    <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/tree/<%= it.branch %>">(top)</a><%
+    <%
+    const crumbHrefBase = `/${it.repo.owner}/${it.repo.name}/${it.view === "blob" ? "tree" : it.view}/${it.branch}`;
+    %>
+    <a href="<%= crumbHrefBase %>">(top)</a><%
     const pathParts = it.path.split('/').filter(p => p);
     let currentPath = '';
     for (let i = 0; i < pathParts.length; i++) {
@@ -24,7 +27,7 @@
       if (isLast) {
         %>/<%= part %><%= it.view === "tree" ? "/" : "" %><%
       } else {
-        %>/<a href="/<%= it.repo.owner %>/<%= it.repo.name %>/tree/<%= it.branch %>/<%= currentPath %>"><%= part %></a><%
+        %>/<a href="<%= crumbHrefBase %>/<%= currentPath %>"><%= part %></a><%
       }
     } %>
   <% } %>
