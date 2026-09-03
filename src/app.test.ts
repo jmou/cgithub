@@ -124,6 +124,29 @@ describe("blob view", () => {
     assert.match(html, /This file cannot be displayed\./);
   });
 
+  it("should give each syntax-highlighted line an anchor", () => {
+    const html = eta.render("blob.eta", {
+      ...blob,
+      path: "src/app.ts",
+      htmlLines: ['<span class="pl-k">const</span> x;', "x++;"],
+    });
+
+    assert.match(
+      html,
+      /<code><span id="L1"><span class="pl-k">const<\/span> x;<\/span>\n<span id="L2">x\+\+;<\/span><\/code>/,
+    );
+  });
+
+  it("should give each plain-text line an anchor", () => {
+    const html = eta.render("blob.eta", {
+      ...blob,
+      path: "notes.txt",
+      textLines: ["a < b", "c"],
+    });
+
+    assert.match(html, /<code><span id="L1">a &lt; b<\/span>\n<span id="L2">c<\/span><\/code>/);
+  });
+
   it("should offer the raw file when there is nothing to display", () => {
     const html = eta.render("blob.eta", blob);
 

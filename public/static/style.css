@@ -286,6 +286,10 @@ object.pdf {
 pre.box {
   /* Instead of scrolling overflow for long lines, grow the box. */
   width: fit-content;
+
+  span:target {
+    background: var(--shade-background);
+  }
 }
 
 .overview, .release, .wiki {

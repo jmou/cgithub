@@ -22,9 +22,11 @@
 <% } else if (it.htmlContent) { %>
   <div class="box"><%~ it.htmlContent %></div>
 <% } else if (it.htmlLines) { %>
-  <pre class="box"><code><%~ it.htmlLines.join("\n") %></code></pre>
+  <pre class="box"><code><% for (const [i, line] of it.htmlLines.entries()) {
+    %><%= i ? "\n" : "" %><span id="L<%= i + 1 %>"><%~ line %></span><% } %></code></pre>
 <% } else if (it.textLines) { %>
-  <pre class="box"><code><%= it.textLines.join("\n") %></code></pre>
+  <pre class="box"><code><% for (const [i, line] of it.textLines.entries()) {
+    %><%= i ? "\n" : "" %><span id="L<%= i + 1 %>"><%= line %></span><% } %></code></pre>
 <% } else { %>
   <div class="box">This file cannot be displayed.</div>
 <% } %>
