@@ -16,8 +16,9 @@ import {
   getGitHubTree,
   getGitHubWiki,
   getGitHubWikiPages,
+  ExternalRedirectError,
   GitHubHTTPError,
-  RedirectError,
+  InternalRedirectError,
 } from "./scraper.ts";
 
 describe("GitHub scraper", () => {
@@ -215,7 +216,7 @@ describe("GitHub scraper", () => {
       const oid = "b39c421b98f49d83ae50ec502c3ddfc3bf28f2c6";
 
       await assert.rejects(getGitHubTree("actions", "deploy-pages", oid, "src/index.js"), (err) => {
-        assert(err instanceof RedirectError, "error should be a RedirectError");
+        assert(err instanceof InternalRedirectError, "error should be an InternalRedirectError");
         assert.strictEqual(err.location, `/actions/deploy-pages/blob/${oid}/src/index.js`);
         return true;
       });
@@ -490,7 +491,7 @@ describe("GitHub scraper", () => {
 
     it("should redirect to the repository when it has no wiki", async () => {
       await assert.rejects(getGitHubWiki("git", "git"), (err) => {
-        assert(err instanceof RedirectError, "error should be a RedirectError");
+        assert(err instanceof InternalRedirectError, "error should be an InternalRedirectError");
         assert.strictEqual(err.location, "/git/git");
         return true;
       });
@@ -571,7 +572,7 @@ describe("GitHub scraper", () => {
 
     it("should redirect to GitHub for non-profile pages", async () => {
       await assert.rejects(getGitHubOwner("features"), (err) => {
-        assert(err instanceof RedirectError, "error should be a RedirectError");
+        assert(err instanceof ExternalRedirectError, "error should be an ExternalRedirectError");
         assert.strictEqual(err.location, "https://github.com/features");
         return true;
       });
@@ -599,7 +600,7 @@ describe("GitHub scraper", () => {
       await assert.rejects(
         getGitHubBlob("earendil-works", "pi", "main", "packages/agent"),
         (err) => {
-          assert(err instanceof RedirectError, "error should be a RedirectError");
+          assert(err instanceof InternalRedirectError, "error should be an InternalRedirectError");
           assert.strictEqual(err.location, "/earendil-works/pi/tree/main/packages/agent");
           return true;
         },
@@ -610,7 +611,7 @@ describe("GitHub scraper", () => {
       await assert.rejects(
         getGitHubTree("earendil-works", "pi", "main", "packages/agent/package.json"),
         (err) => {
-          assert(err instanceof RedirectError, "error should be a RedirectError");
+          assert(err instanceof InternalRedirectError, "error should be an InternalRedirectError");
           assert.strictEqual(
             err.location,
             "/earendil-works/pi/blob/main/packages/agent/package.json",

@@ -13,15 +13,19 @@ export class GitHubHTTPError extends Error {
   }
 }
 
-export class RedirectError extends Error {
+export abstract class RedirectError extends Error {
   location: string;
 
   constructor(location: string) {
     super(`Redirect to ${location}`);
-    this.name = "RedirectError";
+    this.name = this.constructor.name;
     this.location = location;
   }
 }
+
+export class InternalRedirectError extends RedirectError {}
+
+export class ExternalRedirectError extends RedirectError {}
 
 interface TreeItem {
   contentType: "directory" | "file";
@@ -423,7 +427,7 @@ async function fetchGitHubResponse(path: string, accept: string): Promise<Respon
     if (location) {
       const url = new URL(location);
       if (url.hostname === "github.com") {
-        throw new RedirectError(url.pathname);
+        throw new InternalRedirectError(url.pathname);
       }
     }
   }
@@ -1127,7 +1131,7 @@ export async function getGitHubOwner(owner: string): Promise<GitHubOwner> {
     return parseOrganization(document, owner);
   }
   // Not a profile page (marketing pages like github.com/features, etc.).
-  throw new RedirectError(`https://github.com/${owner}`);
+  throw new ExternalRedirectError(`https://github.com/${owner}`);
 }
 
 // The text directly inside an element, ignoring any nested elements' text.

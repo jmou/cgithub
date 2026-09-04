@@ -18,7 +18,9 @@ import {
   getGitHubTree,
   getGitHubWiki,
   getGitHubWikiPages,
+  ExternalRedirectError,
   GitHubHTTPError,
+  InternalRedirectError,
   RedirectError,
 } from "./scraper.ts";
 
@@ -64,73 +66,53 @@ export function createApp(eta: Eta) {
     return redirectTo(c, githubUrlFor(c));
   }
 
-  app.get("/", async (c) => {
-    return c.render("home.eta");
-  });
-
-  async function tryRender<T extends object>(c: Context, template: string, promise: Promise<T>) {
-    let data: T;
-    try {
-      data = await promise;
-    } catch (e) {
-      if (e instanceof RedirectError) {
-        if (e.location.startsWith("https://")) {
-          return redirectTo(c, e.location);
-        }
-        return c.redirect(e.location);
-      } else if (e instanceof GitHubHTTPError) {
-        c.status(e.status as StatusCode);
-        const message = `GitHub responded with HTTP ${e.status} ${e.message}`;
-        return c.render("error.eta", { title: e.message, message });
-      } else {
-        c.status(500);
-        return c.render("error.eta", { message: "" + e });
-      }
-    }
-    return c.render(template, data);
-  }
-
-  // For fragments fetched asynchronously by client-side JS (see public/static/refs.js):
-  // errors render as an empty body rather than the full error.eta page.
-  async function tryRenderFragment<T extends object>(
-    c: Context,
-    template: string,
-    promise: Promise<T>,
-  ) {
-    let data: T;
-    try {
-      data = await promise;
-    } catch (e) {
-      const status =
+  app.onError((e, c) => {
+    // Fragments fetched asynchronously by client-side JS (see public/static/refs.js)
+    // fail as an empty body rather than the full error.eta page.
+    if (c.req.path.startsWith("/api/")) {
+      c.status(
         e instanceof GitHubHTTPError
           ? (e.status as StatusCode)
           : e instanceof RedirectError
             ? 404
-            : 500;
-      c.status(status);
+            : 500,
+      );
       return c.body(null);
     }
-    return c.render(template, data);
-  }
+
+    if (e instanceof InternalRedirectError) return c.redirect(e.location);
+    if (e instanceof ExternalRedirectError) return redirectTo(c, e.location);
+    if (e instanceof GitHubHTTPError) {
+      c.status(e.status as StatusCode);
+      const message = `GitHub responded with HTTP ${e.status} ${e.message}`;
+      return c.render("error.eta", { title: e.message, message });
+    }
+    c.status(500);
+    return c.render("error.eta", { message: "" + e });
+  });
+
+  app.get("/", async (c) => {
+    return c.render("home.eta");
+  });
 
   app.get("/:owner", async (c) => {
     const { owner } = c.req.param();
-    return tryRender(c, "owner.eta", getGitHubOwner(owner));
+    return c.render("owner.eta", await getGitHubOwner(owner));
   });
 
   app.get("/:owner/:repo", async (c) => {
     const { owner, repo } = c.req.param();
-    return tryRender(c, "repo.eta", getGitHubRepo(owner, repo));
+    return c.render("repo.eta", await getGitHubRepo(owner, repo));
   });
 
   app.get("/:owner/:repo/tree/:branch/:path{.*}?", async (c) => {
     const { owner, repo, branch, path = "" } = c.req.param();
-    return tryRender(c, "tree.eta", getGitHubTree(owner, repo, branch, path));
+    return c.render("tree.eta", await getGitHubTree(owner, repo, branch, path));
   });
 
   app.get("/:owner/:repo/blob/:branch/:path{.*}", async (c) => {
     const { owner, repo, branch, path } = c.req.param();
-    return tryRender(c, "blob.eta", getGitHubBlob(owner, repo, branch, path));
+    return c.render("blob.eta", await getGitHubBlob(owner, repo, branch, path));
   });
 
   app.get("/:owner/:repo/raw/:branch/:path{.*}", async (c) => {
@@ -168,12 +150,12 @@ export function createApp(eta: Eta) {
   // page can never be mistaken for one.
   app.get("/:owner/:repo/wiki", async (c) => {
     const { owner, repo } = c.req.param();
-    return tryRender(c, "wiki.eta", getGitHubWiki(owner, repo));
+    return c.render("wiki.eta", await getGitHubWiki(owner, repo));
   });
 
   app.get("/:owner/:repo/wiki/_pages", async (c) => {
     const { owner, repo } = c.req.param();
-    return tryRender(c, "wikiPages.eta", getGitHubWikiPages(owner, repo));
+    return c.render("wikiPages.eta", await getGitHubWikiPages(owner, repo));
   });
 
   // An older revision of a page renders exactly like its current one.
@@ -182,7 +164,7 @@ export function createApp(eta: Eta) {
     if (page.startsWith("_") || !/^[0-9a-f]{40}$/.test(oid)) {
       return redirectToGitHub(c);
     }
-    return tryRender(c, "wiki.eta", getGitHubWiki(owner, repo, page, oid));
+    return c.render("wiki.eta", await getGitHubWiki(owner, repo, page, oid));
   });
 
   app.get("/:owner/:repo/wiki/:page", async (c) => {
@@ -190,7 +172,7 @@ export function createApp(eta: Eta) {
     if (page.startsWith("_")) {
       return redirectToGitHub(c);
     }
-    return tryRender(c, "wiki.eta", getGitHubWiki(owner, repo, page));
+    return c.render("wiki.eta", await getGitHubWiki(owner, repo, page));
   });
 
   app.get("/:owner/:repo/issues", async (c) => {
@@ -203,13 +185,13 @@ export function createApp(eta: Eta) {
       return c.redirect(`/${owner}/${repo}/issues?q=${encodeURIComponent(`is:issue ${q}`)}`);
     }
 
-    return tryRender(c, "issues.eta", getGitHubIssues(owner, repo, { q }));
+    return c.render("issues.eta", await getGitHubIssues(owner, repo, { q }));
   });
 
   app.get("/:owner/:repo/pulls", async (c) => {
     const { owner, repo } = c.req.param();
     const q = c.req.query("q");
-    return tryRender(c, "pulls.eta", getGitHubPulls(owner, repo, { q }));
+    return c.render("pulls.eta", await getGitHubPulls(owner, repo, { q }));
   });
 
   app.get("/:owner/:repo/search", async (c) => {
@@ -229,7 +211,7 @@ export function createApp(eta: Eta) {
 
   app.get("/:owner/:repo/commits/:branch/:path{.*}?", async (c) => {
     const { owner, repo, branch, path = "" } = c.req.param();
-    return tryRender(c, "commits.eta", getGitHubCommits(owner, repo, branch, path));
+    return c.render("commits.eta", await getGitHubCommits(owner, repo, branch, path));
   });
 
   // Internal endpoints fetched asynchronously by client-side JS, not meant to
@@ -246,32 +228,28 @@ export function createApp(eta: Eta) {
     if (view !== "tree" && view !== "blob" && view !== "commits") {
       return c.notFound();
     }
-    const refs = getGitHubRefs(owner, repo, type).then((data) => ({ ...data, view, path }));
-    return tryRenderFragment(c, "_refs.eta", refs);
+    const refs = await getGitHubRefs(owner, repo, type);
+    return c.render("_refs.eta", { ...refs, view, path });
   });
 
   app.get("/api/:owner/:repo/latest-commit/:branch/:path{.*}?", async (c) => {
     const { owner, repo, branch, path = "" } = c.req.param();
-    return tryRenderFragment(
-      c,
-      "_latestCommit.eta",
-      getGitHubLatestCommit(owner, repo, branch, path),
-    );
+    return c.render("_latestCommit.eta", await getGitHubLatestCommit(owner, repo, branch, path));
   });
 
   app.get("/api/:owner/:repo/sidebar", async (c) => {
     const { owner, repo } = c.req.param();
-    return tryRenderFragment(c, "_sidebar.eta", getGitHubSidebar(owner, repo));
+    return c.render("_sidebar.eta", await getGitHubSidebar(owner, repo));
   });
 
   app.get("/:owner/:repo/releases/tag/:tag", async (c) => {
     const { owner, repo, tag } = c.req.param();
-    return tryRender(c, "release.eta", getGitHubRelease(owner, repo, tag));
+    return c.render("release.eta", await getGitHubRelease(owner, repo, tag));
   });
 
   app.get("/:owner/:repo/releases", async (c) => {
     const { owner, repo } = c.req.param();
-    return tryRender(c, "releases.eta", getGitHubReleases(owner, repo));
+    return c.render("releases.eta", await getGitHubReleases(owner, repo));
   });
 
   app.all("*", async (c) => {
