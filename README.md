@@ -3,6 +3,8 @@ JavaScript and doesn't require API keys. It runs on Cloudflare Workers; to use
 it, deploy your own instance then replace `github.com` in your URL with your
 domain.
 
+![Screenshot of cgithub repository page.](docs/screenshot.png)
+
 ## Development
 
 To run the server locally:
