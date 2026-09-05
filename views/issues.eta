@@ -1,4 +1,4 @@
-<% layout("./layout"); it.searchType = "issues" %>
+<% layout("/layouts/repo.eta"); it.searchType = "issues" %>
 
 <table>
   <% for (const issue of it.issues) { %>

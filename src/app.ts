@@ -39,7 +39,7 @@ export function createApp(eta: Eta) {
   const app = new Hono();
 
   app.use(async (c, next) => {
-    // Include render data for layout.eta.
+    // Include render data for views/layouts/base.eta.
     c.setRenderer((template, data) =>
       c.html(eta.render(template, { ...data, githubUrl: githubUrlFor(c), buildCommit })),
     );

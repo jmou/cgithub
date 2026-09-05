@@ -1,0 +1,59 @@
+<%
+layout("/layouts/base.eta", {
+  title: `${it.repo.owner}/${it.repo.name} - ${it.path || "/"}`,
+  scripts: ["/static/refs.js"],
+})
+%>
+
+<div class="box">
+  <div class="repo"><a href="/<%= it.repo.owner %>"><%= it.repo.owner %></a>/<a href="/<%= it.repo.owner %>/<%= it.repo.name %>"><%= it.repo.name %></a></div>
+  <pre><code>git clone https://github.com/<%= it.repo.owner %>/<%= it.repo.name %>.git
+git clone git@github.com:<%= it.repo.owner %>/<%= it.repo.name %>.git</code></pre>
+  <nav>
+    <a href="/<%= it.repo.owner %>/<%= it.repo.name %>">Code</a>
+    <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/issues">Issues</a>
+    <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/pulls">Pull requests</a>
+    <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/releases">Releases</a>
+    <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/wiki">Wiki</a>
+    <% if (it.branch) { %>
+      <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/commits/<%= it.branch %><%= it.path && it.path !== '/' ? '/' + it.path : '' %>">Commits</a>
+    <% } %>
+  </nav>
+  <form action="/<%= it.repo.owner %>/<%= it.repo.name %>/search" method="get">
+    <input id="search-input" type="text" name="q" placeholder="Search…" value="<%= it.q ?? "" %>">
+    <select name="type">
+      <option value="issues" <%= it.searchType === "issues" ? "selected" : "" %>>Issues</option>
+      <option value="pullrequests" <%= it.searchType === "pullrequests" ? "selected" : "" %>>Pull requests</option>
+      <option value="code" <%= it.searchType === "code" || it.searchType == null ? "selected" : "" %>>Code</option>
+    </select>
+    <button type="submit">Search</button>
+  </form>
+</div>
+
+<%~ it.body %>
+
+<script>
+  document.addEventListener("keydown", function(e) {
+    let shortcut = "";
+    if (e.ctrlKey || e.metaKey) shortcut += "C-";
+    if (e.altKey) shortcut += "A-";
+    if (e.shiftKey) shortcut += "S-";
+    shortcut += e.key;
+
+    if (shortcut === "Escape") {
+      document.activeElement.blur();
+      return;
+    }
+
+    if (["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName)) {
+      return;
+    }
+
+    if (shortcut === "/") {
+      e.preventDefault();
+      const input = document.getElementById('search-input');
+      input.select();
+      input.scrollIntoView({ block: "nearest" });
+    }
+  });
+</script>

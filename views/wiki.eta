@@ -1,4 +1,4 @@
-<% layout("./layout.eta"); it.path = "wiki/" + it.title %>
+<% layout("/layouts/repo.eta"); it.path = "wiki/" + it.title %>
 
 <%~ include("./_wikiNav.eta", it) %>
 

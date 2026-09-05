@@ -1,4 +1,4 @@
-<% layout("./layout"); it.searchType = "pullrequests" %>
+<% layout("/layouts/repo.eta"); it.searchType = "pullrequests" %>
 
 <table>
   <% for (const pull of it.pulls) { %>

@@ -1,4 +1,4 @@
-<% layout("./layout.eta"); it.searchType = "code" %>
+<% layout("/layouts/repo.eta"); it.searchType = "code" %>
 
 <%~ include("./_nav.eta", {...it, view: "blob"}) %>
 

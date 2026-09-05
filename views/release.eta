@@ -1,3 +1,3 @@
-<% layout("./layout.eta") %>
+<% layout("/layouts/repo.eta") %>
 
 <%~ include("./_release.eta", { repo: it.repo, release: it.release, linkToDetail: false }) %>

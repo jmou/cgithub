@@ -9,8 +9,11 @@ import { views } from "./views.generated.ts";
 // cache: true, Eta serves them from the cache and never compiles.
 const eta = new Eta({ cache: true });
 
+// Templates name each other as siblings ("./_tree") or from the views root
+// ("/layouts/base.eta"); either way the name is the path under views/ that
+// scripts/build.ts keyed the template by.
 eta.resolvePath = (templatePath: string) => {
-  let name = templatePath.replace(/^\.\//, "");
+  let name = templatePath.replace(/^\.?\//, "");
   if (!name.endsWith(".eta")) name += ".eta";
   return name;
 };
