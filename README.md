@@ -5,41 +5,40 @@ domain.
 
 ![Screenshot of cgithub repository page.](docs/screenshot.png)
 
-## Development
+## Features
 
-To run the server locally:
-```
-$ pnpm run dev
-```
+Implemented:
 
-To run tests:
-```
-$ pnpm test
-```
+- Repository overview
+- Directory listing and file browsing (`tree`/`blob`)
+- Commit history (but this often results in 429 Too Many Requests on Cloudflare)
+- Issue and pull request lists and search
+- Release lists and details
+- Wiki
+- User and organization profiles
 
-## Deployment
+Not implemented:
 
-To deploy to Cloudflare Workers:
-```
-$ pnpm run deploy
-```
-
-The worker name and other settings live in `wrangler.jsonc`.
+- Issue, pull request, and commit details
+- Issue and pull request status and labels
+- Code search (GitHub requires signing in)
+- Pagination (only the first page of issues, pull requests, commits, releases,
+  branches, and tags is shown)
+- Blame, contributors, stargazer/fork lists, network graphs, and insights
+- Actions, checks, projects, packages, discussions, and gists
+- Profile tabs other than the overview (repositories, projects, packages,
+  people, sponsoring)
+- Anything requiring an account: signing in, starring, commenting, editing, or
+  any other write action
+- Private repositories
 
 ## Browser extension redirects
 
-Pages cgithub can't render (marketing pages, code search, anything unrouted) are
-redirected back to github.com. A browser extension that rewrites github.com URLs
-to a cgithub instance with `declarativeNetRequest` will match those redirects
-too and send the request straight back, looping forever.
-
-To avoid this, cgithub never answers with an HTTP redirect: it serves a small
-page that navigates to github.com with a two-second `<meta http-equiv="refresh">`.
-Because that navigation is initiated by the cgithub origin, the extension can
-let it through with `excludedInitiatorDomains`; without that, the user at least
-lands on a page they can stop on, with a link, instead of an endless loop.
-
-A rule that redirects to a cgithub instance should therefore look like this:
+cgithub redirects unsupported routes back to github.com. A browser extension
+that rewrites github.com URLs to a cgithub instance with `declarativeNetRequest`
+will match those redirects and send the request back, looping forever. To avoid
+this, the extension should configure `excludedInitiatorDomains` with the cgithub
+domain:
 
 ```jsonc
 {
@@ -55,6 +54,10 @@ A rule that redirects to a cgithub instance should therefore look like this:
   },
 }
 ```
+
+## Related
+
+- [GotHub](https://codeberg.org/gothub/gothub)
 
 ## Disclosures
 

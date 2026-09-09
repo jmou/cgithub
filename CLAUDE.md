@@ -42,3 +42,4 @@ pnpm test
 
 - Use `for (const ... of ...)` instead of `.forEach()`
 - Update `scraper.test.ts`
+- When implementing a new feature update `README.md`
