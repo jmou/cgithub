@@ -358,6 +358,38 @@ describe("wiki", () => {
   });
 });
 
+describe("global search", () => {
+  it("should keep the rest of the query around the qualifier", async () => {
+    const res = await app.request(
+      "http://cgithub.example/search?q=" +
+        encodeURIComponent("is:issue repo:actions/deploy-pages label:bug") +
+        "&type=issues",
+    );
+
+    assert.strictEqual(
+      res.headers.get("location"),
+      "/actions/deploy-pages/search?q=is%3Aissue+label%3Abug&type=issues",
+    );
+  });
+
+  it("should redirect searches it cannot scope to a repository", async () => {
+    for (const url of [
+      "http://cgithub.example/search?q=dms&type=code",
+      // An owner-wide search is not a single repository.
+      "http://cgithub.example/search?q=" +
+        encodeURIComponent("org:nix-community dms") +
+        "&type=code",
+      // Without a type there is no search to hand over.
+      "http://cgithub.example/search?q=" + encodeURIComponent("repo:actions/deploy-pages dms"),
+    ]) {
+      const res = await app.request(url);
+
+      assert.strictEqual(res.status, 200, url);
+      assert.match(await res.text(), /url=https:\/\/github.com\/search\?/);
+    }
+  });
+});
+
 describe("redirects to GitHub", () => {
   // An HTTP redirect would be caught by the extension's declarativeNetRequest
   // rules and bounced straight back here.

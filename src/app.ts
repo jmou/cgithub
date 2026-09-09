@@ -95,6 +95,25 @@ export function createApp(eta: Eta) {
     return c.render("home.eta");
   });
 
+  // GitHub's global search, which we only serve when it is scoped to a single
+  // repository: strip the qualifier and let that repository's search route
+  // decide what to do with the rest.
+  app.get("/search", async (c) => {
+    const q = c.req.query("q") ?? "";
+    const type = c.req.query("type");
+
+    const repoQualifier = /(?:^|\s)repo:([^/\s]+)\/([^/\s]+)(?=\s|$)/.exec(q);
+    if (type && repoQualifier) {
+      const [qualifier, owner, repo] = repoQualifier;
+      const rest =
+        q.slice(0, repoQualifier.index) + q.slice(repoQualifier.index + qualifier.length);
+      const params = new URLSearchParams({ q: rest.trim(), type });
+      return c.redirect(`/${owner}/${repo}/search?${params}`);
+    }
+
+    return redirectToGitHub(c);
+  });
+
   app.get("/:owner", async (c) => {
     const { owner } = c.req.param();
     return c.render("owner.eta", await getGitHubOwner(owner));
