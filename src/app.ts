@@ -95,6 +95,11 @@ export function createApp(eta: Eta) {
     return c.render("home.eta");
   });
 
+  // Exclusion that immediately redirects to GitHub.
+  app.get("/notifications", async (c) => {
+    return redirectToGitHub(c);
+  });
+
   // GitHub's global search, which we only serve when it is scoped to a single
   // repository: strip the qualifier and let that repository's search route
   // decide what to do with the rest.

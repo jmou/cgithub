@@ -28,8 +28,8 @@ Not implemented:
 - Actions, checks, projects, packages, discussions, and gists
 - Profile tabs other than the overview (repositories, projects, packages,
   people, sponsoring)
-- Anything requiring an account: signing in, starring, commenting, editing, or
-  any other write action
+- Anything requiring an account: signing in, notifications, starring,
+  commenting, editing, or any other write action
 - Private repositories
 
 ## Browser extension redirects

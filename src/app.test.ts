@@ -441,6 +441,13 @@ describe("redirects to GitHub", () => {
     );
   });
 
+  it("should redirect notifications without scraping them as a profile", async () => {
+    const res = await app.request("http://cgithub.example/notifications?query=is%3Aunread");
+
+    assert.strictEqual(res.status, 200);
+    assert.match(await res.text(), /url=https:\/\/github.com\/notifications\?query=is%3Aunread"/);
+  });
+
   it("should redirect raw file requests to raw.githubusercontent.com", async () => {
     const res = await app.request("http://cgithub.example/actions/deploy-pages/raw/main/README.md");
 
