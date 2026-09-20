@@ -22,9 +22,9 @@ git clone git@github.com:<%= it.repo.owner %>/<%= it.repo.name %>.git</code></pr
   <form action="/<%= it.repo.owner %>/<%= it.repo.name %>/search" method="get">
     <input id="search-input" type="text" name="q" placeholder="Search…" value="<%= it.q ?? "" %>">
     <select name="type">
-      <option value="issues" <%= it.searchType === "issues" ? "selected" : "" %>>Issues</option>
+      <option value="code" <%= it.searchType === "code" ? "selected" : "" %>>Code</option>
+      <option value="issues" <%= it.searchType === "issues" || it.searchType == null ? "selected" : "" %>>Issues</option>
       <option value="pullrequests" <%= it.searchType === "pullrequests" ? "selected" : "" %>>Pull requests</option>
-      <option value="code" <%= it.searchType === "code" || it.searchType == null ? "selected" : "" %>>Code</option>
     </select>
     <button type="submit">Search</button>
   </form>
