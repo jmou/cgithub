@@ -7,6 +7,7 @@ import {
   getGitHubCommits,
   getGitHubDiscussion,
   getGitHubDiscussions,
+  getGitHubIssue,
   getGitHubIssues,
   getGitHubSidebar,
   getGitHubLatestCommit,
@@ -212,6 +213,16 @@ export function createApp(eta: Eta) {
     }
 
     return c.render("issues.eta", await getGitHubIssues(owner, repo, { q }));
+  });
+
+  // GitHub puts its own actions (new, assigned, ...) where a number goes, so
+  // anything that isn't one is not an issue of ours to render.
+  app.get("/:owner/:repo/issues/:number", async (c) => {
+    const { owner, repo, number } = c.req.param();
+    if (!/^\d+$/.test(number)) {
+      return redirectToGitHub(c);
+    }
+    return c.render("issue.eta", await getGitHubIssue(owner, repo, Number(number)));
   });
 
   app.get("/:owner/:repo/pulls", async (c) => {

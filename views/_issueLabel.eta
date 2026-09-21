@@ -1,0 +1,1 @@
+<span class="pill"<% if (it.label.description) { %> title="<%= it.label.description %>"<% } %>><span class="pill-dot" style="background: #<%= it.label.color %>"></span><%= it.label.name %></span>

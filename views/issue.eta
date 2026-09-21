@@ -1,0 +1,67 @@
+<%
+layout("/layouts/repo.eta")
+it.path = `issues/${it.number}`
+it.searchType = "issues"
+
+const stateText = it.state !== "CLOSED"
+  ? "Open"
+  : it.stateReason === "NOT_PLANNED"
+    ? "Closed as not planned"
+    : it.stateReason === "DUPLICATE"
+      ? "Closed as duplicate"
+      : "Closed"
+%>
+
+<div class="box">
+  <h2><%~ it.titleHtml %></h2>
+
+  #<%= it.number %>
+  <span class="pill state <%= it.state === "CLOSED" ? "state-closed" : "state-open" %>"><%= stateText %></span>
+  <% if (it.labels.length > 0) { %>
+    <% for (const label of it.labels) { %>
+      <%~ include("./_issueLabel.eta", { label }) %>
+    <% } %>
+  <% } %>
+  <% if (it.assignees.length > 0) { %>
+    assigned to
+    <% for (const assignee of it.assignees) { %>
+      <a href="/<%= assignee %>"><%= assignee %></a>
+    <% } %>
+  <% } %>
+  <% if (it.milestone) { %>
+    milestone <a href="<%= it.milestone.href %>"><%= it.milestone.title %></a>
+  <% } %>
+</div>
+
+<%~ include("./_issueComment.eta", { comment: it.body }) %>
+
+<% for (const item of it.timeline) { %>
+  <% if (item.kind === "comment") { %>
+    <%~ include("./_issueComment.eta", { comment: item }) %>
+  <% } else { %>
+    <div class="issue-event"<% if (item.anchor) { %> id="<%= item.anchor %>"<% } %>>
+      <span>
+        <% if (item.actor) { %>
+          <a href="/<%= item.actor %>"><%= item.actor %></a>
+        <% } else { %>
+          <span class="placeholder">ghost</span>
+        <% } %>
+        <%= item.description %><% if (item.label) { %> <%~ include("./_issueLabel.eta", { label: item.label }) %> label<% } %><% if (item.link) { %> <a href="<%= item.link.href %>"><%= item.link.text %></a><% } %>
+      </span>
+      <span class="timestamp">
+        <% if (item.anchor) { %>
+          <a href="#<%= item.anchor %>"><time title="<%= item.createdAt %>"><%= item.createdAt.split("T")[0] %></time></a>
+        <% } else { %>
+          <time title="<%= item.createdAt %>"><%= item.createdAt.split("T")[0] %></time>
+        <% } %>
+      </span>
+    </div>
+  <% } %>
+<% } %>
+
+<% if (it.hiddenItems > 0) { %>
+  <div class="box placeholder">
+    <%= it.hiddenItems %> later
+    <%= it.hiddenItems === 1 ? "comment or event is" : "comments and events are" %> only on GitHub.
+  </div>
+<% } %>

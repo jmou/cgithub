@@ -20,12 +20,13 @@ Implemented:
 
 Not implemented:
 
-- Issue, pull request, and commit details
-- Issue and pull request status and labels
+- Pull request and commit details
+- Issue and pull request status and labels in their lists
 - Code search (GitHub requires signing in)
 - Pagination (only the first page of issues, pull requests, discussions,
   commits, releases, branches, and tags is shown, and likewise only the replies
-  GitHub sends with a discussion rather than behind a "show more" button)
+  GitHub sends with a discussion, and the timeline items it sends with an issue,
+  rather than what is behind a "show more" button)
 - Blame, contributors, stargazer/fork lists, network graphs, and insights
 - Actions, checks, projects, packages, and gists
 - Profile tabs other than the overview (repositories, projects, packages,

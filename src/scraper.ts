@@ -72,6 +72,72 @@ interface IssueIndexPageQuery {
   };
 }
 
+interface IssueActor {
+  login: string;
+}
+
+interface IssueLabelNode {
+  name: string;
+  color: string;
+  description: string | null;
+}
+
+// One entry of an issue's timeline. Every event type has its own fields, so all
+// but the ones every item carries are optional here.
+interface IssueTimelineNode {
+  __typename: string;
+  createdAt: string;
+  databaseId?: number;
+  // Comments only; events name whoever performed them as the actor.
+  author?: IssueActor | null;
+  url?: string;
+  authorAssociation?: string;
+  bodyHTML?: string;
+  actor?: IssueActor | null;
+  label?: IssueLabelNode;
+  assignee?: IssueActor | null;
+  blockedUser?: IssueActor | null;
+  milestoneTitle?: string;
+  stateReason?: string | null;
+  lockReason?: string | null;
+  previousTitle?: string;
+  currentTitle?: string;
+  commit?: { url?: string; abbreviatedOid?: string } | null;
+}
+
+interface IssueViewerNode {
+  number: number;
+  databaseId: number;
+  // Titles are Markdown, so they can carry code spans and emoji.
+  titleHTML: string;
+  state: string;
+  stateReason: string | null;
+  createdAt: string;
+  author: IssueActor | null;
+  bodyHTML: string;
+  labels?: { edges: { node: IssueLabelNode }[] };
+  assignedActors?: { nodes: IssueActor[] };
+  milestone?: { title: string; url: string } | null;
+  // The oldest page of the timeline; GitHub fetches the rest as you scroll.
+  frontTimelineItems: {
+    totalCount: number;
+    edges: { node: IssueTimelineNode }[];
+  };
+}
+
+interface IssueViewerViewQuery {
+  queryName: "IssueViewerViewQuery";
+  result: {
+    data: {
+      repository: {
+        issue: IssueViewerNode;
+      };
+    };
+  };
+}
+
+type PreloadedQuery = IssueIndexPageQuery | IssueViewerViewQuery;
+
 type StylingDirective = [number, number, string];
 
 export interface Commit {
@@ -171,7 +237,7 @@ interface AppPayload {
   codeViewBlobRoute?: CodeViewBlobRoute;
   commitsRefRoute?: CommitsRefRoute;
   // Actually there may be other query types.
-  preloadedQueries?: IssueIndexPageQuery[];
+  preloadedQueries?: PreloadedQuery[];
 }
 
 function escapeHtml(text: string): string {
@@ -282,6 +348,58 @@ export interface GitHubIssues extends GitHubCommon {
 export interface GitHubPulls extends GitHubCommon {
   pulls: Issue[];
   q?: string;
+}
+
+export interface IssueLabel {
+  name: string;
+  // GitHub's own hex color for the label, without a leading "#".
+  color: string;
+  description: string | null;
+}
+
+export interface IssueComment {
+  // What GitHub's permalinks point at, e.g. "issuecomment-3090316111".
+  anchor: string;
+  author: string | null;
+  // The badge beside the author: Owner, Member, Contributor, ...
+  association: string | null;
+  createdAt: string;
+  bodyHtml: string;
+}
+
+export interface IssueEvent {
+  // What GitHub's permalinks point at, e.g. "event-25375447940".
+  anchor: string;
+  actor: string | null;
+  createdAt: string;
+  // What happened, in GitHub's own words, e.g. "closed this as completed".
+  description: string;
+  // What the description ends on, when it names one: a label, or anything else
+  // worth linking (the assignee, the commit that referenced the issue, ...).
+  label: IssueLabel | null;
+  link: { text: string; href: string } | null;
+}
+
+export type IssueTimelineItem =
+  | ({ kind: "comment" } & IssueComment)
+  | ({ kind: "event" } & IssueEvent);
+
+export interface GitHubIssue extends GitHubCommon {
+  number: number;
+  titleHtml: string;
+  state: string;
+  // Why a closed issue was closed: COMPLETED, NOT_PLANNED, DUPLICATE.
+  stateReason: string | null;
+  createdAt: string;
+  labels: IssueLabel[];
+  assignees: string[];
+  milestone: { title: string; href: string } | null;
+  // The issue itself, rendered like the comments that follow it.
+  body: IssueComment;
+  timeline: IssueTimelineItem[];
+  // Timeline items GitHub fetches as you scroll rather than sending with the
+  // page, so we never see them.
+  hiddenItems: number;
 }
 
 interface DiscussionCategory {
@@ -681,6 +799,186 @@ export async function getGitHubIssues(
   });
 
   return { repo: { owner, name: repo }, issues, q };
+}
+
+// GitHub's payloads carry absolute URLs; the same paths on our host are ours.
+function githubPath(url: string | undefined): string | null {
+  const parsed = url ? URL.parse(url) : null;
+  return parsed?.hostname === "github.com" ? parsed.pathname : null;
+}
+
+// "FIRST_TIME_CONTRIBUTOR" is a badge; "NONE" is everybody else, and no badge.
+function issueAssociation(association: string | undefined): string | null {
+  if (!association || association === "NONE") return null;
+  const words = association.toLowerCase().replace(/_/g, " ");
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+function parseIssueLabel(label: IssueLabelNode): IssueLabel {
+  return { name: label.name, color: label.color, description: label.description ?? null };
+}
+
+function parseIssueComment(node: IssueTimelineNode): IssueComment {
+  return {
+    anchor: node.url?.split("#")[1] ?? "",
+    author: node.author?.login ?? null,
+    association: issueAssociation(node.authorAssociation),
+    createdAt: node.createdAt,
+    bodyHtml: node.bodyHTML ?? "",
+  };
+}
+
+function userLink(user: IssueActor | null | undefined): { text: string; href: string } | null {
+  return user ? { text: user.login, href: `/${user.login}` } : null;
+}
+
+// GitHub's timeline carries more event types than it shows, and shows more than
+// are worth a line here; anything this does not describe is left out.
+function parseIssueEvent(node: IssueTimelineNode): IssueEvent | null {
+  const event = {
+    anchor: node.databaseId ? `event-${node.databaseId}` : "",
+    actor: node.actor?.login ?? null,
+    createdAt: node.createdAt,
+    label: null,
+    link: null,
+  };
+
+  switch (node.__typename) {
+    case "ClosedEvent":
+      return {
+        ...event,
+        description:
+          node.stateReason === "NOT_PLANNED"
+            ? "closed this as not planned"
+            : node.stateReason === "DUPLICATE"
+              ? "closed this as a duplicate"
+              : "closed this as completed",
+      };
+    case "ReopenedEvent":
+      return { ...event, description: "reopened this" };
+    case "LabeledEvent":
+    case "UnlabeledEvent":
+      if (!node.label) return null;
+      return {
+        ...event,
+        description: node.__typename === "LabeledEvent" ? "added the" : "removed the",
+        label: parseIssueLabel(node.label),
+      };
+    case "AssignedEvent":
+    case "UnassignedEvent": {
+      const assigned = node.__typename === "AssignedEvent";
+      // GitHub words an assignment to oneself without naming anybody.
+      if (node.assignee && node.assignee.login === event.actor) {
+        return {
+          ...event,
+          description: assigned ? "self-assigned this" : "removed their assignment",
+        };
+      }
+      return {
+        ...event,
+        description: assigned ? "assigned this to" : "unassigned",
+        link: userLink(node.assignee),
+      };
+    }
+    case "MilestonedEvent":
+      return { ...event, description: `added this to the ${node.milestoneTitle} milestone` };
+    case "DemilestonedEvent":
+      return { ...event, description: `removed this from the ${node.milestoneTitle} milestone` };
+    case "RenamedTitleEvent":
+      return { ...event, description: `changed the title to ${node.currentTitle}` };
+    case "LockedEvent":
+      return {
+        ...event,
+        description: node.lockReason
+          ? `locked this conversation as ${node.lockReason.toLowerCase().replace(/_/g, " ")}`
+          : "locked this conversation",
+      };
+    case "UnlockedEvent":
+      return { ...event, description: "unlocked this conversation" };
+    case "PinnedEvent":
+      return { ...event, description: "pinned this" };
+    case "UnpinnedEvent":
+      return { ...event, description: "unpinned this" };
+    case "ReferencedEvent": {
+      const href = githubPath(node.commit?.url);
+      if (!href || !node.commit?.abbreviatedOid) return null;
+      return {
+        ...event,
+        description: "referenced this in commit",
+        link: { text: node.commit.abbreviatedOid, href },
+      };
+    }
+    case "UserBlockedEvent":
+      return { ...event, description: "blocked", link: userLink(node.blockedUser) };
+    default:
+      return null;
+  }
+}
+
+export async function getGitHubIssue(
+  owner: string,
+  repo: string,
+  number: number,
+): Promise<GitHubIssue> {
+  const html = await fetchGitHubPage(`${owner}/${repo}/issues/${number}`);
+  const payload = parsePayload(html);
+
+  let issue: IssueViewerNode | undefined;
+  for (const query of payload?.preloadedQueries ?? []) {
+    if (query.queryName === "IssueViewerViewQuery") {
+      issue = query.result.data.repository.issue;
+    }
+  }
+  if (issue === undefined) {
+    throw new Error("Could not find IssueViewerViewQuery in embedded JSON");
+  }
+
+  const timeline: IssueTimelineItem[] = [];
+  for (const edge of issue.frontTimelineItems.edges) {
+    if (edge.node.__typename === "IssueComment") {
+      timeline.push({ kind: "comment", ...parseIssueComment(edge.node) });
+      continue;
+    }
+    const event = parseIssueEvent(edge.node);
+    if (event) timeline.push({ kind: "event", ...event });
+  }
+
+  const labels: IssueLabel[] = [];
+  for (const edge of issue.labels?.edges ?? []) {
+    labels.push(parseIssueLabel(edge.node));
+  }
+
+  const assignees: string[] = [];
+  for (const assignee of issue.assignedActors?.nodes ?? []) {
+    assignees.push(assignee.login);
+  }
+
+  const milestoneHref = githubPath(issue.milestone?.url);
+
+  return {
+    repo: { owner, name: repo },
+    number: issue.number,
+    titleHtml: issue.titleHTML,
+    state: issue.state,
+    stateReason: issue.stateReason,
+    createdAt: issue.createdAt,
+    labels,
+    assignees,
+    milestone:
+      issue.milestone && milestoneHref
+        ? { title: issue.milestone.title, href: milestoneHref }
+        : null,
+    body: {
+      // The issue's own permalink, which GitHub anchors on its database id.
+      anchor: `issue-${issue.databaseId}`,
+      author: issue.author?.login ?? null,
+      association: null,
+      createdAt: issue.createdAt,
+      bodyHtml: issue.bodyHTML,
+    },
+    timeline,
+    hiddenItems: issue.frontTimelineItems.totalCount - issue.frontTimelineItems.edges.length,
+  };
 }
 
 export async function getGitHubPulls(

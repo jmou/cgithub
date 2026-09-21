@@ -34,6 +34,8 @@ pnpm test
 - `GET /:owner/:repo/tree/:branch/:path*` - Directory listing
 - `GET /:owner/:repo/blob/:branch/:path` - File content view
 - `GET /:owner/:repo/commits/:branch/:path*` - Commit history of the repository, a directory, or a file
+- `GET /:owner/:repo/issues` - Issue list, searched with `q`
+- `GET /:owner/:repo/issues/:number` - An issue, its comments, and its timeline events
 - `GET /:owner/:repo/discussions` - Discussion list, searched with `discussions_q`
 - `GET /:owner/:repo/discussions/categories/:category` - Discussions in one category
 - `GET /:owner/:repo/discussions/:number` - A discussion, its comments, and their replies

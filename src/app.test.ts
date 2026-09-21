@@ -358,6 +358,118 @@ describe("wiki", () => {
   });
 });
 
+describe("issues", () => {
+  const repo = { owner: "cli", name: "cli" };
+  const label = { name: "bug", color: "d73a4a", description: "Something isn't working" };
+  const issue = {
+    repo,
+    number: 10000,
+    titleHtml: "<code>--allow-forking=false</code> not interpreted correctly",
+    state: "CLOSED",
+    stateReason: "NOT_PLANNED",
+    createdAt: "2024-12-03T23:01:40Z",
+    labels: [label],
+    assignees: ["BagToad"],
+    milestone: { title: "gh v2.64", href: "/cli/cli/milestone/42" },
+    body: {
+      anchor: "issue-2716088121",
+      author: "celloza",
+      association: null,
+      createdAt: "2024-12-03T23:01:40Z",
+      bodyHtml: "<p>Forking is disabled.</p>",
+    },
+    timeline: [
+      {
+        kind: "comment",
+        anchor: "issuecomment-2517193151",
+        author: "BagToad",
+        association: "Member",
+        createdAt: "2024-12-06T20:49:46Z",
+        bodyHtml: "<p>Working as intended.</p>",
+      },
+      {
+        kind: "event",
+        anchor: "event-15562412541",
+        actor: "BagToad",
+        createdAt: "2024-12-06T20:49:46Z",
+        description: "added the",
+        label,
+        link: null,
+      },
+      {
+        kind: "event",
+        anchor: "",
+        actor: "BagToad",
+        createdAt: "2024-12-06T20:49:46Z",
+        description: "closed this as not planned",
+        label: null,
+        link: null,
+      },
+    ],
+    hiddenItems: 0,
+  };
+
+  it("should render the issue above its timeline", () => {
+    const html = eta.render("issue.eta", issue);
+
+    assert.match(html, /<title>cli\/cli - issues\/10000<\/title>/);
+    assert.match(html, /<h2><code>--allow-forking=false<\/code> not interpreted correctly<\/h2>/);
+    assert.match(html, /#10000/);
+    assert.match(html, /<span class="pill state state-closed">Closed as not planned<\/span>/);
+    assert.match(html, /<div class="box comment" id="issue-2716088121">\s*<header>\s*<span>\s*<a href="\/celloza">celloza<\/a>/);
+    assert.match(html, /<div class="box comment" id="issuecomment-2517193151">/);
+    assert.match(html, /<span class="pill">Member<\/span>/);
+    // The search box searches issues from an issue.
+    assert.match(html, /<option value="issues" selected>/);
+  });
+
+  it("should render the labels, assignees, and milestone beside the state", () => {
+    const html = eta.render("issue.eta", issue);
+
+    assert.match(html, /<span class="pill-dot" style="background: #d73a4a"><\/span>bug/);
+    assert.match(html, /title="Something isn&#39;t working"/);
+    assert.match(html, /assigned to\s+<a href="\/BagToad">BagToad<\/a>/);
+    assert.match(html, /milestone <a href="\/cli\/cli\/milestone\/42">gh v2.64<\/a>/);
+  });
+
+  // Events are a line each, rather than a box like the comments around them.
+  it("should render an event per timeline entry that is not a comment", () => {
+    const html = eta.render("issue.eta", issue);
+
+    assert.match(html, /<div class="issue-event" id="event-15562412541">/);
+    assert.match(html, /<div class="issue-event">/);
+    assert.match(html, /added the <span class="pill"[^>]*>.*<\/span>\s+label/);
+    assert.match(html, /closed this as not planned/);
+  });
+
+  it("should link timestamps to their comment or event", () => {
+    const html = eta.render("issue.eta", issue);
+
+    assert.match(html, /<a href="#issue-2716088121"><time/);
+    assert.match(html, /<a href="#issuecomment-2517193151"><time/);
+    assert.match(html, /<a href="#event-15562412541"><time/);
+  });
+
+  it("should say what GitHub keeps to itself", () => {
+    assert.match(
+      eta.render("issue.eta", { ...issue, hiddenItems: 8 }),
+      /8 later\s+comments and events are only on GitHub\./,
+    );
+    assert.match(
+      eta.render("issue.eta", { ...issue, hiddenItems: 1 }),
+      /1 later\s+comment or event is only on GitHub\./,
+    );
+  });
+
+  // GitHub's own actions live where a number goes, so they are not ours.
+  it("should only scrape an issue path that names a number", async () => {
+    const res = await app.request("http://cgithub.example/cli/cli/issues/new");
+
+    assert.strictEqual(res.status, 200);
+    assert.match(await res.text(), /url=https:\/\/github.com\/cli\/cli\/issues\/new"/);
+  });
+});
+
 describe("discussions", () => {
   const repo = { owner: "jj-vcs", name: "jj" };
   const categories = [

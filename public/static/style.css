@@ -325,6 +325,14 @@ pre.box {
   white-space: nowrap;
 }
 
+.pill-dot {
+  display: inline-block;
+  width: .6rem;
+  height: .6rem;
+  margin-right: .3rem;
+  border-radius: 50%;
+}
+
 .overview, .release, .wiki, .comment {
   overflow-wrap: break-word;
 
@@ -398,6 +406,24 @@ pre.box {
 .timestamp {
   white-space: nowrap;
   font-size: .8rem;
+}
+
+/* An issue or pull request state pill takes its border from its own color. */
+.state {
+  border-color: currentColor;
+}
+
+.state-open {
+  color: var(--success-color);
+}
+
+/* A timeline entry that is not a comment, so it is a line rather than a box. */
+.issue-event {
+  display: flex;
+  justify-content: space-between;
+  gap: .5rem;
+  margin: .5rem;
+  font-size: .9rem;
 }
 
 .answered {

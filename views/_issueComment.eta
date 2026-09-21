@@ -1,0 +1,18 @@
+<div class="box comment" id="<%= it.comment.anchor %>">
+  <header>
+    <span>
+      <% if (it.comment.author) { %>
+        <a href="/<%= it.comment.author %>"><%= it.comment.author %></a>
+      <% } else { %>
+        <span class="placeholder">ghost</span>
+      <% } %>
+      <% if (it.comment.association) { %>
+        <span class="pill"><%= it.comment.association %></span>
+      <% } %>
+    </span>
+    <span class="timestamp">
+      <a href="#<%= it.comment.anchor %>"><time title="<%= it.comment.createdAt %>"><%= it.comment.createdAt.split("T")[0] %></time></a>
+    </span>
+  </header>
+  <%~ it.comment.bodyHtml %>
+</div>

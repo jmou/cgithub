@@ -5,6 +5,7 @@ import {
   getGitHubCommits,
   getGitHubDiscussion,
   getGitHubDiscussions,
+  getGitHubIssue,
   getGitHubIssues,
   getGitHubSidebar,
   getGitHubLatestCommit,
@@ -495,6 +496,82 @@ describe("GitHub scraper", () => {
       await assert.rejects(getGitHubWiki("git", "git"), (err) => {
         assert(err instanceof InternalRedirectError, "error should be an InternalRedirectError");
         assert.strictEqual(err.location, "/git/git");
+        return true;
+      });
+    });
+  });
+
+  describe("issues", () => {
+    it("should fetch an issue with its comments", async () => {
+      const data = await getGitHubIssue("actions", "deploy-pages", 402);
+
+      assert.strictEqual(data.repo.owner, "actions");
+      assert.strictEqual(data.repo.name, "deploy-pages");
+      assert.strictEqual(data.number, 402);
+      assert.strictEqual(data.titleHtml, "Dry Run");
+      assert.strictEqual(data.state, "OPEN");
+      assert.strictEqual(data.stateReason, null);
+      assert.strictEqual(data.createdAt, "2025-07-03T19:07:08Z");
+
+      // The issue's own post reads like the comments that follow it.
+      assert.strictEqual(data.body.anchor, "issue-3200386867");
+      assert.strictEqual(data.body.author, "wmcnamee-coreweave");
+      assert.strictEqual(data.body.createdAt, "2025-07-03T19:07:08Z");
+      assert.match(data.body.bodyHtml, /I'd like to do a dry run/);
+
+      const comments = data.timeline.filter((item) => item.kind === "comment");
+      const comment = comments.find((item) => item.anchor === "issuecomment-3090316111");
+      assert.ok(comment);
+      assert.strictEqual(comment.author, "yoannchaudet");
+      assert.strictEqual(comment.association, "Contributor");
+      assert.match(comment.bodyHtml, /dry run/);
+    });
+
+    it("should fetch the events an issue's timeline carries", async () => {
+      const data = await getGitHubIssue("actions", "deploy-pages", 417);
+
+      assert.strictEqual(data.state, "CLOSED");
+      assert.strictEqual(data.stateReason, "COMPLETED");
+
+      const events = data.timeline.filter((item) => item.kind === "event");
+      const closed = events.find((event) => event.description === "closed this as completed");
+      assert.ok(closed);
+      assert.strictEqual(closed.anchor, "event-25375447940");
+      assert.strictEqual(closed.actor, "beingme8583-netizen");
+      assert.strictEqual(closed.label, null);
+      assert.strictEqual(closed.link, null);
+    });
+
+    it("should fetch the labels, assignees, and milestone of an issue", async () => {
+      const data = await getGitHubIssue("microsoft", "vscode", 199954);
+
+      assert.strictEqual(data.state, "CLOSED");
+      assert.deepStrictEqual(data.assignees, ["jrieken"]);
+      assert.deepStrictEqual(data.milestone, {
+        title: "June 2025",
+        href: "/microsoft/vscode/milestone/308",
+      });
+
+      const label = data.labels.find((label) => label.name === "feature-request");
+      assert.ok(label);
+      assert.strictEqual(label.color, "dcdcdc");
+      assert.strictEqual(label.description, "Request for new features or functionality");
+
+      // A labelling event names the label it applied.
+      const events = data.timeline.filter((item) => item.kind === "event");
+      const labelled = events.find((event) => event.label?.name === "feature-request");
+      assert.ok(labelled);
+      assert.strictEqual(labelled.description, "added the");
+      assert.strictEqual(labelled.actor, "jrieken");
+
+      // GitHub only sends the oldest page of a long timeline with the page.
+      assert.ok(data.hiddenItems > 0);
+    });
+
+    it("should redirect an issue number that names a pull request", async () => {
+      await assert.rejects(getGitHubIssue("actions", "deploy-pages", 411), (err) => {
+        assert(err instanceof InternalRedirectError, "error should be an InternalRedirectError");
+        assert.strictEqual(err.location, "/actions/deploy-pages/pull/411");
         return true;
       });
     });
