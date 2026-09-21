@@ -284,6 +284,60 @@ export interface GitHubPulls extends GitHubCommon {
   q?: string;
 }
 
+interface DiscussionCategory {
+  slug: string;
+  name: string;
+  // Every category has an emoji, but GitHub only prints it in some places.
+  emoji: string | null;
+}
+
+interface DiscussionSummary {
+  number: number;
+  // Titles are Markdown, so they can carry code spans and emoji.
+  titleHtml: string;
+  author: string | null;
+  createdAt: string | null;
+  category: DiscussionCategory | null;
+  answered: boolean;
+}
+
+export interface DiscussionComment {
+  // What GitHub's permalinks point at, e.g. "discussioncomment-9174663".
+  anchor: string;
+  author: string | null;
+  createdAt: string | null;
+  // The badges beside the author: Author, Maintainer, Collaborator, ...
+  labels: string[];
+  bodyHtml: string;
+  // How GitHub words a comment it keeps collapsed, e.g. "This comment has been
+  // hidden." or "This comment was marked as off-topic."; null when the comment
+  // is shown as usual. A collapsed comment arrives with no author or body.
+  hiddenReason: string | null;
+  isAnswer: boolean;
+  replies: DiscussionComment[];
+  // Replies GitHub keeps collapsed behind a "show more" button of its own.
+  hiddenReplies: number;
+}
+
+export interface GitHubDiscussions extends GitHubCommon {
+  discussions: DiscussionSummary[];
+  categories: DiscussionCategory[];
+  // The category the list is narrowed to, if any.
+  category: DiscussionCategory | null;
+  q?: string;
+}
+
+export interface GitHubDiscussion extends GitHubCommon {
+  number: number;
+  titleHtml: string;
+  author: string | null;
+  category: DiscussionCategory | null;
+  // The comment a Q&A discussion is answered by, as an anchor on this page.
+  answerAnchor: string | null;
+  body: DiscussionComment;
+  comments: DiscussionComment[];
+}
+
 export interface GitHubCommits extends GitHubNav {
   commitGroups: CommitGroup[];
 }
@@ -662,6 +716,184 @@ export async function getGitHubPulls(
   }
 
   return { repo: { owner, name: repo }, pulls, q };
+}
+
+// A category link names the category on its own in a discussion's header and
+// in a list row; in the sidebar it wraps an emoji and a label of its own.
+function parseDiscussionCategory(link: Element | null): DiscussionCategory | null {
+  const href = link ? getAttributeValue(link, "href") : undefined;
+  // A list row's category link carries the filter it would apply as a query.
+  const slug = href?.split("?")[0].split("/").pop();
+  if (!link || !slug) return null;
+
+  const label = cssSelect.selectOne(".ActionList-item-label", link) ?? link;
+  const emoji = cssSelect.selectOne("g-emoji", link);
+  return {
+    slug,
+    name: textContent(label).replace(/\s+/g, " ").trim(),
+    emoji: emoji ? textContent(emoji).trim() : null,
+  };
+}
+
+function parseDiscussionCategories(document: AnyNode): DiscussionCategory[] {
+  const categories: DiscussionCategory[] = [];
+  const links = cssSelect.selectAll(
+    'nav[aria-label="Categories"] a[href*="/discussions/categories/"]',
+    document,
+  ) as unknown as Element[];
+  for (const link of links) {
+    const category = parseDiscussionCategory(link);
+    if (category) categories.push(category);
+  }
+  return categories;
+}
+
+function parseDiscussionSummary(row: Element): DiscussionSummary | null {
+  const link = cssSelect.selectOne('a[data-hovercard-type="discussion"]', row);
+  const href = link ? getAttributeValue(link, "href") : undefined;
+  const number = parseInt(href?.split("/").pop() ?? "", 10);
+  if (!link || !number) return null;
+
+  const time = cssSelect.selectOne("relative-time", row);
+
+  return {
+    number,
+    titleHtml: getInnerHTML(link).trim(),
+    author: selectText('a[aria-label$="(author)"]', row),
+    createdAt: time ? (getAttributeValue(time, "datetime") ?? null) : null,
+    category: parseDiscussionCategory(cssSelect.selectOne('a[aria-label$="(category)"]', row)),
+    // An answered thread is called out in green beside its category.
+    answered: cssSelect.selectOne(".color-fg-success", row) !== null,
+  };
+}
+
+export async function getGitHubDiscussions(
+  owner: string,
+  repo: string,
+  { q, category }: { q?: string; category?: string } = {},
+): Promise<GitHubDiscussions> {
+  const base = category
+    ? `${owner}/${repo}/discussions/categories/${category}`
+    : `${owner}/${repo}/discussions`;
+  const suffix = q ? `?discussions_q=${encodeURIComponent(q)}` : "";
+  const html = await fetchGitHubPage(`${base}${suffix}`);
+  const document = parseDocument(html);
+
+  const discussions: DiscussionSummary[] = [];
+  for (const row of cssSelect.selectAll(
+    "li.js-navigation-item",
+    document,
+  ) as unknown as Element[]) {
+    const summary = parseDiscussionSummary(row);
+    if (summary) discussions.push(summary);
+  }
+
+  const categories = parseDiscussionCategories(document);
+
+  return {
+    repo: { owner, name: repo },
+    discussions,
+    categories,
+    category: categories.find((c) => c.slug === category) ?? null,
+    q,
+  };
+}
+
+// A comment and a reply to it are the same markup, with the replies nested
+// inside the comment they answer.
+function parseDiscussionComment(item: Element): DiscussionComment {
+  const target = cssSelect.selectOne(".discussions-timeline-scroll-target[id]", item);
+  const header = cssSelect.selectOne(".timeline-comment-header-text", item);
+  const time = header ? cssSelect.selectOne("relative-time", header) : null;
+  const body = cssSelect.selectOne(".js-comment-body", item);
+
+  // A comment GitHub collapsed has its reason where the header would be, and
+  // nothing else: no author, no time, no body. The header of a comment shown
+  // as usual comes first, so only a collapsed one owns the first match here;
+  // in the others it belongs to a nested reply.
+  const minimized = cssSelect.selectOne(".minimized-comment .timeline-comment-header-text", item);
+  const hiddenReason =
+    header !== null && header === minimized
+      ? textContent(header).replace(/\s+/g, " ").trim()
+      : null;
+
+  const labels: string[] = [];
+  if (header) {
+    for (const label of cssSelect.selectAll(".Label", header) as unknown as Element[]) {
+      labels.push(textContent(label).replace(/\s+/g, " ").trim());
+    }
+  }
+
+  const replies: DiscussionComment[] = [];
+  for (const reply of cssSelect.selectAll(
+    ".discussion-nested-comment-timeline-item",
+    item,
+  ) as unknown as Element[]) {
+    replies.push(parseDiscussionComment(reply));
+  }
+
+  // Long threads arrive with the older replies behind a "Show 5 previous
+  // replies" button, which needs GitHub's JavaScript to load them.
+  let hiddenReplies = 0;
+  for (const button of cssSelect.selectAll(
+    ".discussion-nested-comment-paging-form .Button-label",
+    item,
+  ) as unknown as Element[]) {
+    const count = /(\d+)/.exec(textContent(button));
+    if (count) hiddenReplies += parseInt(count[1], 10);
+  }
+
+  return {
+    anchor: target ? (getAttributeValue(target, "id") ?? "") : "",
+    author: header ? selectText('a[data-hovercard-type="user"]', header) : null,
+    createdAt: time ? (getAttributeValue(time, "datetime") ?? null) : null,
+    labels,
+    bodyHtml: hiddenReason ? "" : body ? getInnerHTML(body).trim() : "",
+    hiddenReason,
+    isAnswer: cssSelect.selectOne(".discussion-footer-answered-badge", item) !== null,
+    replies,
+    hiddenReplies,
+  };
+}
+
+export async function getGitHubDiscussion(
+  owner: string,
+  repo: string,
+  number: number,
+): Promise<GitHubDiscussion> {
+  const html = await fetchGitHubPage(`${owner}/${repo}/discussions/${number}`);
+  const document = parseDocument(html);
+
+  const header = cssSelect.selectOne("#partial-discussion-header", document) as Element | null;
+  if (!header) {
+    throw new Error("Could not find the discussion header");
+  }
+
+  // The discussion's own post opens the timeline; the rest are its comments.
+  const items = cssSelect.selectAll(".discussion-timeline-item", document) as unknown as Element[];
+  if (items.length === 0) {
+    throw new Error("Could not find the discussion body");
+  }
+  const [body, ...comments] = items.map(parseDiscussionComment);
+
+  const title = cssSelect.selectOne(".js-issue-title", header);
+  // Who opened the discussion, and where, sits under the title; an answer, when
+  // there is one, is in a state badge above it.
+  const meta = cssSelect.selectOne("div.color-fg-muted", header) as Element | null;
+  const answer = cssSelect.selectOne(".js-discussions-goto-answer-button", header);
+
+  return {
+    repo: { owner, name: repo },
+    number,
+    titleHtml: title ? getInnerHTML(title).trim() : "",
+    author: meta ? selectText("a[href]", meta) : null,
+    category: parseDiscussionCategory(
+      meta ? cssSelect.selectOne('a[href*="/discussions/categories/"]', meta) : null,
+    ),
+    answerAnchor: answer ? (getAttributeValue(answer, "href") ?? "").replace(/^#/, "") : null,
+    body,
+    comments,
+  };
 }
 
 export async function getGitHubCommits(

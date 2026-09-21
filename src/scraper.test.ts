@@ -3,6 +3,8 @@ import { describe, it } from "node:test";
 import {
   getGitHubBlob,
   getGitHubCommits,
+  getGitHubDiscussion,
+  getGitHubDiscussions,
   getGitHubIssues,
   getGitHubSidebar,
   getGitHubLatestCommit,
@@ -493,6 +495,135 @@ describe("GitHub scraper", () => {
       await assert.rejects(getGitHubWiki("git", "git"), (err) => {
         assert(err instanceof InternalRedirectError, "error should be an InternalRedirectError");
         assert.strictEqual(err.location, "/git/git");
+        return true;
+      });
+    });
+  });
+
+  describe("discussions", () => {
+    it("should fetch the discussion list with its categories", async () => {
+      const data = await getGitHubDiscussions("jj-vcs", "jj");
+
+      assert.strictEqual(data.repo.owner, "jj-vcs");
+      assert.strictEqual(data.repo.name, "jj");
+      assert.strictEqual(data.q, undefined);
+      assert.strictEqual(data.category, null);
+
+      assert.ok(data.discussions.length > 0);
+      assert.ok(data.discussions.every((discussion) => discussion.number > 0));
+      assert.ok(data.discussions.every((discussion) => discussion.titleHtml !== ""));
+      assert.ok(data.discussions.every((discussion) => discussion.createdAt));
+
+      assert.deepStrictEqual(
+        data.categories.find((category) => category.slug === "q-a"),
+        { slug: "q-a", name: "Q&A", emoji: "\u{1F64F}" },
+      );
+    });
+
+    // The category link in a row carries the filter it would apply as a query,
+    // which is not part of the slug we route on.
+    it("should narrow the list to one category", async () => {
+      const data = await getGitHubDiscussions("jj-vcs", "jj", { category: "q-a" });
+
+      assert.deepStrictEqual(data.category, { slug: "q-a", name: "Q&A", emoji: "\u{1F64F}" });
+      assert.ok(data.discussions.length > 0);
+      assert.ok(data.discussions.every((discussion) => discussion.category?.slug === "q-a"));
+    });
+
+    it("should search the list with q", async () => {
+      const data = await getGitHubDiscussions("jj-vcs", "jj", { q: "advance-branches" });
+
+      assert.strictEqual(data.q, "advance-branches");
+      const feedback = data.discussions.find((discussion) => discussion.number === 3549);
+      assert.ok(feedback);
+      assert.strictEqual(feedback.author, "emesterhazy");
+      assert.strictEqual(feedback.category?.slug, "general");
+      assert.strictEqual(feedback.createdAt, "2024-04-20T14:32:15Z");
+      assert.strictEqual(feedback.answered, false);
+    });
+
+    it("should fetch a discussion with its comments and replies", async () => {
+      const data = await getGitHubDiscussion("jj-vcs", "jj", 3549);
+
+      assert.strictEqual(data.repo.owner, "jj-vcs");
+      assert.strictEqual(data.number, 3549);
+      // Titles are Markdown, so the code span survives into the HTML.
+      assert.strictEqual(
+        data.titleHtml,
+        "Feedback for the experimental <code>advance-branches</code> feature",
+      );
+      assert.strictEqual(data.author, "emesterhazy");
+      assert.deepStrictEqual(data.category, { slug: "general", name: "General", emoji: null });
+      assert.strictEqual(data.answerAnchor, null);
+
+      assert.strictEqual(data.body.anchor, "discussion-6532740");
+      assert.strictEqual(data.body.author, "emesterhazy");
+      assert.strictEqual(data.body.createdAt, "2024-04-20T14:32:15Z");
+      assert.match(data.body.bodyHtml, /Please leave any feedback/);
+
+      assert.ok(data.comments.length > 0);
+      assert.ok(data.comments.every((comment) => comment.anchor.startsWith("discussioncomment-")));
+      // Replies hang off the comment they answer.
+      const threaded = data.comments.filter((comment) => comment.replies.length > 0);
+      assert.ok(threaded.length > 0);
+      // GitHub collapses the older replies of the longest threads.
+      assert.ok(data.comments.some((comment) => comment.hiddenReplies > 0));
+    });
+
+    it("should mark the comment a discussion was answered by", async () => {
+      const data = await getGitHubDiscussion("mozilla", "pdf.js", 18821);
+
+      assert.strictEqual(data.repo.owner, "mozilla");
+      assert.strictEqual(data.repo.name, "pdf.js");
+      assert.strictEqual(data.number, 18821);
+      assert.strictEqual(
+        data.titleHtml,
+        "[Bug]: TypeError Promise.withResolvers is not a function",
+      );
+      assert.strictEqual(data.author, "techpranav");
+      assert.deepStrictEqual(data.category, { slug: "q-a", name: "Q&A", emoji: null });
+
+      assert.strictEqual(data.body.anchor, "discussion-7249716");
+      assert.strictEqual(data.body.createdAt, "2024-09-29T08:35:02Z");
+      assert.strictEqual(data.body.isAnswer, false);
+
+      assert.strictEqual(data.answerAnchor, "discussioncomment-10945480");
+
+      const answer = data.comments.find((comment) => comment.isAnswer);
+      assert.ok(answer);
+      assert.strictEqual(answer.anchor, data.answerAnchor);
+      assert.strictEqual(answer.author, "Snuffleupagus");
+      assert.deepStrictEqual(answer.labels, ["Collaborator"]);
+      assert.strictEqual(answer.replies.length, 1);
+      assert.strictEqual(answer.replies[0].isAnswer, false);
+    });
+
+    // A comment GitHub collapsed is served as its reason alone: signed out,
+    // there is no author, no timestamp, and no body to show.
+    it("should keep the reason a comment was hidden", async () => {
+      const data = await getGitHubDiscussion("mozilla", "pdf.js", 18821);
+
+      const replies = data.comments.flatMap((comment) => comment.replies);
+      const hidden = replies.find((reply) => reply.anchor === "discussioncomment-10945516");
+      assert.ok(hidden);
+      assert.strictEqual(hidden.hiddenReason, "This comment has been hidden.");
+      assert.strictEqual(hidden.author, null);
+      assert.strictEqual(hidden.createdAt, null);
+      assert.strictEqual(hidden.bodyHtml, "");
+
+      // The comment it is a reply to is shown as usual, hidden reply and all.
+      const parent = data.comments.find((comment) =>
+        comment.replies.some((reply) => reply === hidden),
+      );
+      assert.ok(parent);
+      assert.strictEqual(parent.hiddenReason, null);
+      assert.ok(parent.bodyHtml !== "");
+    });
+
+    it("should throw for a repository with discussions turned off", async () => {
+      await assert.rejects(getGitHubDiscussions("torvalds", "linux"), (err) => {
+        assert(err instanceof GitHubHTTPError, "error should be an HTTPError");
+        assert.strictEqual(err.status, 404);
         return true;
       });
     });

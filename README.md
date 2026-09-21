@@ -13,6 +13,7 @@ Implemented:
 - Directory listing and file browsing (`tree`/`blob`)
 - Commit history (but this often results in 429 Too Many Requests on Cloudflare)
 - Issue and pull request lists and search
+- Discussions
 - Release lists and details
 - Wiki
 - User and organization profiles
@@ -22,10 +23,11 @@ Not implemented:
 - Issue, pull request, and commit details
 - Issue and pull request status and labels
 - Code search (GitHub requires signing in)
-- Pagination (only the first page of issues, pull requests, commits, releases,
-  branches, and tags is shown)
+- Pagination (only the first page of issues, pull requests, discussions,
+  commits, releases, branches, and tags is shown, and likewise only the replies
+  GitHub sends with a discussion rather than behind a "show more" button)
 - Blame, contributors, stargazer/fork lists, network graphs, and insights
-- Actions, checks, projects, packages, discussions, and gists
+- Actions, checks, projects, packages, and gists
 - Profile tabs other than the overview (repositories, projects, packages,
   people, sponsoring)
 - Anything requiring an account: signing in, notifications, starring,

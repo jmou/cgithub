@@ -1,0 +1,29 @@
+<%
+layout("/layouts/repo.eta")
+it.path = `discussions/${it.number}`
+it.searchType = "discussions"
+%>
+
+<div class="box">
+  <h2><%~ it.titleHtml %></h2>
+
+  #<%= it.number %>
+  <% if (it.category) { %>
+    in <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/discussions/categories/<%= it.category.slug %>"><%= it.category.name %></a>
+  <% } %>
+  <% if (it.answerAnchor) { %>
+    <a class="answered pill" href="#<%= it.answerAnchor %>">Answered</a>
+  <% } %>
+</div>
+
+<%~ include("./_discussionComment.eta", { comment: it.body }) %>
+
+<% if (it.answerAnchor) { %>
+  <a class="answered" href="#<%= it.answerAnchor %>">
+    <div class="box">&#x2193; Show answer</div>
+  </a>
+<% } %>
+
+<% for (const comment of it.comments) { %>
+  <%~ include("./_discussionComment.eta", { comment }) %>
+<% } %>

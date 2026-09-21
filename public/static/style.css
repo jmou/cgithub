@@ -27,6 +27,11 @@
     oklch(60% 0.15 250)
   );
 
+  --success-color: light-dark(
+    oklch(45% 0.15 150),
+    oklch(70% 0.15 150)
+  );
+
   --pl-c: light-dark(#6e7781, #8b949e);
   --pl-c1: light-dark(#0550ae, #79c0ff);
   --pl-e: light-dark(#6639ba, #d2a8ff);
@@ -310,7 +315,17 @@ pre.box {
   }
 }
 
-.overview, .release, .wiki {
+.pill {
+  margin-left: .2rem;
+  padding: 0 .4rem;
+  border: 1px solid var(--border-color);
+  border-radius: 1rem;
+  font-size: .8rem;
+  font-weight: normal;
+  white-space: nowrap;
+}
+
+.overview, .release, .wiki, .comment {
   overflow-wrap: break-word;
 
   /* This is a bit convoluted: we want the effect of padding but using margins
@@ -354,7 +369,7 @@ pre.box {
   font-weight: bold;
 }
 
-.release > header, .wiki > header {
+.release > header, .wiki > header, .comment > header {
   display: flex;
   align-items: baseline;
   > :first-child {
@@ -383,6 +398,23 @@ pre.box {
 .timestamp {
   white-space: nowrap;
   font-size: .8rem;
+}
+
+.answered {
+  color: var(--success-color);
+}
+
+.comment.answer {
+  outline: 2px solid var(--success-color);
+  outline-offset: -1px;
+}
+
+.box:has(+ .reply) {
+  margin-bottom: 0;
+}
+
+.reply {
+  margin-top: -1px;
 }
 
 .commit {

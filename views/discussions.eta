@@ -1,0 +1,39 @@
+<%
+layout("/layouts/repo.eta")
+it.path = it.category ? `discussions/${it.category.slug}` : "discussions"
+it.searchType = "discussions"
+%>
+
+<nav>
+  <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/discussions">All</a>
+  <% for (const category of it.categories) { %>
+    <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/discussions/categories/<%= category.slug %>"><% if (category.emoji) { %><%= category.emoji %> <% } %><%= category.name %></a>
+  <% } %>
+</nav>
+
+<% if (it.discussions.length === 0) { %>
+  <div class="box">No discussions found.</div>
+<% } else { %>
+  <table>
+    <% for (const discussion of it.discussions) { %>
+      <tr>
+        <td>
+          <% if (discussion.category) { %>
+            <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/discussions/categories/<%= discussion.category.slug %>"><%= discussion.category.name %></a>
+          <% } %>
+        </td>
+        <td>
+          <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/discussions/<%= discussion.number %>"><%~ discussion.titleHtml %></a>
+          <% if (discussion.answered) { %>
+            <span class="answered pill">Answered</span>
+          <% } %>
+        </td>
+        <td class="timestamp">
+          <% if (discussion.createdAt) { %>
+            <time title="<%= discussion.createdAt %>"><%= discussion.createdAt.split("T")[0] %></time>
+          <% } %>
+        </td>
+      </tr>
+    <% } %>
+  </table>
+<% } %>

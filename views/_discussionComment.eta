@@ -1,0 +1,37 @@
+<div class="box comment<%= it.comment.isAnswer ? " answer" : "" %><%= it.reply ? " reply" : "" %>" id="<%= it.comment.anchor %>">
+<% if (it.comment.hiddenReason) { %>
+  <div class="placeholder"><%= it.comment.hiddenReason %></div>
+<% } else { %>
+    <header>
+      <span>
+        <% if (it.comment.author) { %>
+          <a href="/<%= it.comment.author %>"><%= it.comment.author %></a>
+        <% } else { %>
+          <span class="placeholder">ghost</span>
+        <% } %>
+        <% for (const label of it.comment.labels) { %>
+          <span class="pill"><%= label %></span>
+        <% } %>
+        <% if (it.comment.isAnswer) { %>
+          <span class="answered pill">Answer</span>
+        <% } %>
+      </span>
+      <span class="timestamp">
+        <% if (it.comment.createdAt) { %>
+          <a href="#<%= it.comment.anchor %>"><time title="<%= it.comment.createdAt %>"><%= it.comment.createdAt.split("T")[0] %></time></a>
+        <% } %>
+      </span>
+    </header>
+    <%~ it.comment.bodyHtml %>
+<% } %>
+</div>
+
+<% if (it.comment.hiddenReplies > 0) { %>
+  <div class="box reply placeholder">
+    <%= it.comment.hiddenReplies %> earlier
+    <%= it.comment.hiddenReplies === 1 ? "reply is" : "replies are" %> only on GitHub.
+  </div>
+<% } %>
+<% for (const reply of it.comment.replies) { %>
+  <%~ include("./_discussionComment.eta", { comment: reply, reply: true }) %>
+<% } %>

@@ -15,6 +15,7 @@ layout("/layouts/base.eta", {
     <a href="/<%= it.repo.owner %>/<%= it.repo.name %>">Code</a>
     <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/issues">Issues</a>
     <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/pulls">Pull requests</a>
+    <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/discussions">Discussions</a>
     <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/releases">Releases</a>
     <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/wiki">Wiki</a>
     <% if (it.branch) { %>
@@ -27,6 +28,7 @@ layout("/layouts/base.eta", {
       <option value="code" <%= it.searchType === "code" ? "selected" : "" %>>Code</option>
       <option value="issues" <%= it.searchType === "issues" || it.searchType == null ? "selected" : "" %>>Issues</option>
       <option value="pullrequests" <%= it.searchType === "pullrequests" ? "selected" : "" %>>Pull requests</option>
+      <option value="discussions" <%= it.searchType === "discussions" ? "selected" : "" %>>Discussions</option>
     </select>
     <button type="submit">Search</button>
   </form>

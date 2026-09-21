@@ -5,6 +5,8 @@ import { buildCommit } from "./build.generated.ts";
 import {
   getGitHubBlob,
   getGitHubCommits,
+  getGitHubDiscussion,
+  getGitHubDiscussions,
   getGitHubIssues,
   getGitHubSidebar,
   getGitHubLatestCommit,
@@ -218,6 +220,28 @@ export function createApp(eta: Eta) {
     return c.render("pulls.eta", await getGitHubPulls(owner, repo, { q }));
   });
 
+  app.get("/:owner/:repo/discussions", async (c) => {
+    const { owner, repo } = c.req.param();
+    const q = c.req.query("discussions_q");
+    return c.render("discussions.eta", await getGitHubDiscussions(owner, repo, { q }));
+  });
+
+  app.get("/:owner/:repo/discussions/categories/:category", async (c) => {
+    const { owner, repo, category } = c.req.param();
+    const q = c.req.query("discussions_q");
+    return c.render("discussions.eta", await getGitHubDiscussions(owner, repo, { q, category }));
+  });
+
+  // GitHub puts its own actions (new, categories, ...) where a number goes, so
+  // anything that isn't one is not a discussion of ours to render.
+  app.get("/:owner/:repo/discussions/:number", async (c) => {
+    const { owner, repo, number } = c.req.param();
+    if (!/^\d+$/.test(number)) {
+      return redirectToGitHub(c);
+    }
+    return c.render("discussion.eta", await getGitHubDiscussion(owner, repo, Number(number)));
+  });
+
   app.get("/:owner/:repo/search", async (c) => {
     const { owner, repo } = c.req.param();
     const q = c.req.query("q") ?? "";
@@ -227,6 +251,8 @@ export function createApp(eta: Eta) {
       return c.redirect(`/${owner}/${repo}/issues?q=${encodeURIComponent(q)}`);
     } else if (type === "pullrequests") {
       return c.redirect(`/${owner}/${repo}/pulls?q=${encodeURIComponent(q)}`);
+    } else if (type === "discussions") {
+      return c.redirect(`/${owner}/${repo}/discussions?discussions_q=${encodeURIComponent(q)}`);
     }
 
     // Redirect unhandled search types (like code, which requires sign in anyway).

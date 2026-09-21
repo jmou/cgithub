@@ -358,6 +358,162 @@ describe("wiki", () => {
   });
 });
 
+describe("discussions", () => {
+  const repo = { owner: "jj-vcs", name: "jj" };
+  const categories = [
+    { slug: "general", name: "General", emoji: "\u{1F4AC}" },
+    { slug: "q-a", name: "Q&A", emoji: "\u{1F64F}" },
+  ];
+  const comment = {
+    anchor: "discussioncomment-2258263",
+    author: "martinvonz",
+    createdAt: "2022-02-26T21:56:47Z",
+    labels: ["Maintainer"],
+    bodyHtml: "<p>Good point.</p>",
+    hiddenReason: null,
+    isAnswer: false,
+    replies: [],
+    hiddenReplies: 0,
+  };
+  const discussion = {
+    repo,
+    number: 88,
+    titleHtml: "&quot;at least&quot; .DS_Store was added back",
+    author: "arxanas",
+    category: categories[1],
+    answerAnchor: null,
+    body: { ...comment, anchor: "discussion-3903561", author: "arxanas" },
+    comments: [comment],
+  };
+
+  it("should link every category beside the list", () => {
+    const html = eta.render("discussions.eta", {
+      repo,
+      categories,
+      category: categories[1],
+      discussions: [],
+      q: "hooks",
+    });
+
+    assert.match(html, /href="\/jj-vcs\/jj\/discussions">All<\/a>/);
+    assert.match(html, /href="\/jj-vcs\/jj\/discussions\/categories\/q-a">\u{1F64F} Q&amp;A<\/a>/u);
+    // The search box keeps the query the list was narrowed by.
+    assert.match(html, /<input id="search-input"[^>]*value="hooks">/);
+    assert.match(html, /<option value="discussions" selected>/);
+    assert.match(html, /No discussions found\./);
+  });
+
+  it("should render a row per discussion", () => {
+    const html = eta.render("discussions.eta", {
+      repo,
+      categories,
+      category: null,
+      discussions: [
+        {
+          number: 3549,
+          titleHtml: "Feedback for <code>advance-branches</code>",
+          author: "emesterhazy",
+          createdAt: "2024-04-20T14:32:15Z",
+          category: categories[0],
+          answered: true,
+        },
+      ],
+    });
+
+    assert.match(html, /href="\/jj-vcs\/jj\/discussions\/3549">Feedback for <code>/);
+    assert.match(html, /href="\/jj-vcs\/jj\/discussions\/categories\/general">General<\/a>/);
+    assert.match(html, /<span class="answered pill">Answered<\/span>/);
+    assert.match(html, /<time title="2024-04-20T14:32:15Z">2024-04-20<\/time>/);
+  });
+
+  it("should render the discussion above its comments", () => {
+    const html = eta.render("discussion.eta", discussion);
+
+    assert.match(html, /<title>jj-vcs\/jj - discussions\/88<\/title>/);
+    assert.match(html, /<h2>&quot;at least&quot; \.DS_Store was added back<\/h2>/);
+    assert.match(
+      html,
+      /#88\s+in <a href="\/jj-vcs\/jj\/discussions\/categories\/q-a">Q&amp;A<\/a>/,
+    );
+    // The author is named on the body comment, not in the header.
+    assert.match(html, /<a href="\/arxanas">arxanas<\/a>/);
+    assert.match(html, /<div class="box comment" id="discussion-3903561">/);
+    // The timestamp is the comment's permalink.
+    assert.match(
+      html,
+      /<a href="#discussioncomment-2258263"><time title="2022-02-26T21:56:47Z">2022-02-26<\/time><\/a>/,
+    );
+    assert.match(html, /<div class="box comment" id="discussioncomment-2258263">/);
+    assert.match(html, /<span class="pill">Maintainer<\/span>/);
+  });
+
+  // The answer is called out both in the header, which links down to it, and
+  // on the comment itself.
+  it("should mark the comment that answered the discussion", () => {
+    const html = eta.render("discussion.eta", {
+      ...discussion,
+      answerAnchor: "discussioncomment-2258263",
+      comments: [{ ...comment, isAnswer: true }],
+    });
+
+    assert.match(html, /<a class="answered pill" href="#discussioncomment-2258263">Answered<\/a>/);
+    assert.match(html, /<div class="box comment answer" id="discussioncomment-2258263">/);
+    assert.match(html, /<span class="answered pill">Answer<\/span>/);
+  });
+
+  it("should run replies on from the comment they answer", () => {
+    const html = eta.render("_discussionComment.eta", {
+      comment: {
+        ...comment,
+        hiddenReplies: 5,
+        replies: [{ ...comment, anchor: "discussioncomment-2258264", author: "arxanas" }],
+      },
+    });
+
+    assert.match(
+      html,
+      /<div class="box reply placeholder">\s+5 earlier\s+replies are only on GitHub\./,
+    );
+    assert.match(html, /<div class="box comment reply" id="discussioncomment-2258264">/);
+  });
+
+  // A comment GitHub collapsed has nothing to show but why it was collapsed.
+  it("should render a hidden comment as its reason", () => {
+    const html = eta.render("_discussionComment.eta", {
+      comment: {
+        ...comment,
+        author: null,
+        createdAt: null,
+        labels: [],
+        bodyHtml: "",
+        hiddenReason: "This comment has been hidden.",
+      },
+    });
+
+    assert.match(html, /<div class="box comment" id="discussioncomment-2258263">/);
+    assert.match(html, /<div class="placeholder">This comment has been hidden\.<\/div>/);
+    assert.doesNotMatch(html, /<header>/);
+    assert.doesNotMatch(html, /ghost/);
+  });
+
+  it("should send a discussions search to the discussion list", async () => {
+    const res = await app.request(
+      "http://cgithub.example/jj-vcs/jj/search?q=hooks&type=discussions",
+    );
+
+    assert.strictEqual(res.status, 302);
+    assert.strictEqual(res.headers.get("location"), "/jj-vcs/jj/discussions?discussions_q=hooks");
+  });
+
+  // GitHub's own actions live where a number goes, so they are not ours.
+  it("should only scrape a discussion path that names a number", async () => {
+    const res = await app.request("http://cgithub.example/jj-vcs/jj/discussions/new");
+
+    assert.strictEqual(res.status, 200);
+    assert.match(await res.text(), /url=https:\/\/github.com\/jj-vcs\/jj\/discussions\/new"/);
+  });
+});
+
 describe("global search", () => {
   it("should keep the rest of the query around the qualifier", async () => {
     const res = await app.request(
