@@ -148,6 +148,24 @@ body > footer {
   font-weight: bold;
 }
 
+.clone {
+  margin: .5em 0;
+
+  code {
+    /* Each command is a distinct block so that selecting doesn't pick up a
+     * trailing newline. */
+    display: block;
+    width: fit-content;
+    white-space: pre;
+    user-select: all;
+    cursor: default;
+
+    &:hover {
+      background: var(--shade-background);
+    }
+  }
+}
+
 .avatar {
   float: right;
   clip-path: circle();
