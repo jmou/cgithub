@@ -1,25 +1,19 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>cgithub</title>
-  <link rel="stylesheet" href="/static/style.css">
-</head>
-<body>
-  <header>
-    <h1>cgithub</h1>
-    <p>Lightweight GitHub alternative frontend</p>
-  </header>
+<% layout("/layouts/base.eta", { title: "cgithub" }) %>
 
-  <main>
-    <p>Browse any GitHub repository by navigating to <code>/:owner/:repo</code>, or a user or organization profile at <code>/:owner</code></p>
-  </main>
+<header>
+  <h1>cgithub</h1>
+  <p>Lightweight GitHub alternative frontend</p>
+</header>
 
-  <h2>Credits</h2>
-  <p>Icons by <a href="https://phosphoricons.com">Phosphor Icons</a></p>
-  <details>
-    <summary>Phosphor Icons License (MIT)</summary>
-    <pre>
+<main>
+  <p>Browse any GitHub repository by navigating to <code>/:owner/:repo</code>, or a user or organization profile at <code>/:owner</code></p>
+</main>
+
+<h2>Credits</h2>
+<p>Icons by <a href="https://phosphoricons.com">Phosphor Icons</a></p>
+<details>
+  <summary>Phosphor Icons License (MIT)</summary>
+  <pre>
 MIT License
 
 Copyright (c) 2023 Phosphor Icons
@@ -41,7 +35,5 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-    </pre>
-  </details>
-</body>
-</html>
+  </pre>
+</details>
