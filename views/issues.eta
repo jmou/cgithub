@@ -4,14 +4,13 @@
   <% for (const issue of it.issues) { %>
     <tr>
       <td>#<%= issue.number %></td>
+      <td><%~ include("./_issueState.eta", { state: issue.state }) %></td>
       <td>
         <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/issues/<%= issue.number %>">
           <%= issue.title %>
         </a>
-      </td>
-      <td>
-        <% if (issue.commentCount > 0) { %>
-          <img src="/static/icons/link.svg" alt="comments" class="icon"> <%= issue.commentCount %>
+        <% for (const label of issue.labels) { %>
+          <%~ include("./_issueLabel.eta", { label }) %>
         <% } %>
       </td>
       <td class="timestamp"><time title="<%= issue.createdAt %>"><%= issue.createdAt.split("T")[0] %></time></td>

@@ -1,0 +1,1 @@
+<span class="pill state state-<%= it.state.toLowerCase() %>"><%= it.state.charAt(0) + it.state.slice(1).toLowerCase() %></span>

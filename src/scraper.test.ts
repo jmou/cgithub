@@ -156,7 +156,9 @@ describe("GitHub scraper", () => {
       const issue417 = data.issues.find((issue) => issue.number === 417);
       assert.ok(issue417);
       assert.strictEqual(issue417.title, "Chats");
+      assert.strictEqual(issue417.state, "CLOSED");
       assert.ok(data.issues.every((issue) => issue.title !== ""));
+      assert.ok(data.issues.every((issue) => issue.state === "CLOSED"));
     });
 
     it("should fetch pull requests", async () => {
@@ -167,6 +169,8 @@ describe("GitHub scraper", () => {
       const pr411 = data.pulls.find((pull) => pull.number === 411);
       assert.ok(pr411);
       assert.strictEqual(pr411.title, "update node version");
+      assert.ok(data.pulls.some((pull) => pull.state === "MERGED"));
+      assert.ok(data.pulls.every((pull) => pull.state === "MERGED" || pull.state === "CLOSED"));
     });
 
     it("should fetch commits", async () => {
@@ -502,6 +506,37 @@ describe("GitHub scraper", () => {
   });
 
   describe("issues", () => {
+    it("should fetch the labels an issue list row wears", async () => {
+      const data = await getGitHubIssues("cli", "cli", { q: "is:issue label:bug" });
+
+      assert.ok(data.issues.length > 0);
+      assert.ok(data.issues.every((issue) => issue.labels.some((label) => label.name === "bug")));
+
+      const bug = data.issues[0].labels.find((label) => label.name === "bug");
+      assert.ok(bug);
+      assert.strictEqual(bug.color, "d73a4a");
+      assert.strictEqual(bug.description, "Something isn't working");
+    });
+
+    // A pull request list is HTML, so its labels are colored channel by channel
+    // and described in a tooltip rather than spelled out in a payload.
+    it("should fetch the labels a pull request list row wears", async () => {
+      const data = await getGitHubPulls("cli", "cli", { q: "is:pr label:dependencies" });
+
+      assert.ok(data.pulls.length > 0);
+      const dependencies = data.pulls[0].labels.find((label) => label.name === "dependencies");
+      assert.ok(dependencies);
+      assert.strictEqual(dependencies.color, "0366d6");
+      assert.strictEqual(dependencies.description, "Pull requests that update a dependency file");
+    });
+
+    it("should fetch the state of a draft pull request", async () => {
+      const data = await getGitHubPulls("cli", "cli", { q: "is:pr is:open draft:true" });
+
+      assert.ok(data.pulls.length > 0);
+      assert.ok(data.pulls.every((pull) => pull.state === "DRAFT"));
+    });
+
     it("should fetch an issue with its comments", async () => {
       const data = await getGitHubIssue("actions", "deploy-pages", 402);
 

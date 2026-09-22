@@ -21,7 +21,6 @@ Implemented:
 Not implemented:
 
 - Pull request and commit details
-- Issue and pull request status and labels in their lists
 - Code search (GitHub requires signing in)
 - Pagination (only the first page of issues, pull requests, discussions,
   commits, releases, branches, and tags is shown, and likewise only the replies

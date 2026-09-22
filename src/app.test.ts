@@ -409,6 +409,43 @@ describe("issues", () => {
     hiddenItems: 0,
   };
 
+  it("should render the state and labels of every row of a list", () => {
+    const rows = [
+      {
+        number: 10000,
+        title: "Forking is disabled",
+        state: "CLOSED",
+        createdAt: "2024-12-03T23:01:40Z",
+        labels: [label],
+      },
+      {
+        number: 10001,
+        title: "Add a flag",
+        state: "OPEN",
+        createdAt: "2024-12-04T10:00:00Z",
+        labels: [],
+      },
+    ];
+
+    const issues = eta.render("issues.eta", { repo, issues: rows });
+    assert.match(issues, /<span class="pill state state-closed">Closed<\/span>/);
+    assert.match(issues, /<span class="pill state state-open">Open<\/span>/);
+    assert.match(issues, /<a href="\/cli\/cli\/issues\/10000">\s+Forking is disabled/);
+    assert.match(issues, /<span class="pill-dot" style="background: #d73a4a"><\/span>bug/);
+
+    // A pull request is also merged or a draft, and links to its own page.
+    const pulls = eta.render("pulls.eta", {
+      repo,
+      pulls: [
+        { ...rows[0], state: "MERGED" },
+        { ...rows[1], state: "DRAFT" },
+      ],
+    });
+    assert.match(pulls, /<span class="pill state state-merged">Merged<\/span>/);
+    assert.match(pulls, /<span class="pill state state-draft">Draft<\/span>/);
+    assert.match(pulls, /<a href="\/cli\/cli\/pull\/10000">/);
+  });
+
   it("should render the issue above its timeline", () => {
     const html = eta.render("issue.eta", issue);
 

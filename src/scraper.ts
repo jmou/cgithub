@@ -50,9 +50,7 @@ interface IssueNode {
   state: string;
   labels?: {
     edges: {
-      node: {
-        name: string;
-      };
+      node: IssueLabelNode;
     }[];
   };
 }
@@ -331,11 +329,20 @@ export interface GitHubBlob extends GitHubNav {
   htmlContent: string | null;
 }
 
+export interface IssueLabel {
+  name: string;
+  // GitHub's own hex color for the label, without a leading "#".
+  color: string;
+  description: string | null;
+}
+
 interface Issue {
   number: number;
   title: string;
+  // OPEN or CLOSED for an issue; a pull request is also DRAFT or MERGED.
   state: string;
   createdAt: string;
+  labels: IssueLabel[];
   numReplies?: number;
   numPRs?: number;
 }
@@ -348,13 +355,6 @@ export interface GitHubIssues extends GitHubCommon {
 export interface GitHubPulls extends GitHubCommon {
   pulls: Issue[];
   q?: string;
-}
-
-export interface IssueLabel {
-  name: string;
-  // GitHub's own hex color for the label, without a leading "#".
-  color: string;
-  description: string | null;
 }
 
 export interface IssueComment {
@@ -772,6 +772,35 @@ export async function getGitHubRaw(
   return response;
 }
 
+function parseIssueLabel(label: IssueLabelNode): IssueLabel {
+  return { name: label.name, color: label.color, description: label.description ?? null };
+}
+
+// A label in a list row wears its color as the RGB channels GitHub's own CSS
+// mixes with, rather than as the hex its issue payloads carry, and keeps its
+// description in a tooltip pointing back at it.
+function parseRowLabel(label: Element, row: Element): IssueLabel {
+  const style = getAttributeValue(label, "style") ?? "";
+  const channels: number[] = [];
+  for (const channel of ["r", "g", "b"]) {
+    const value = new RegExp(`--label-${channel}:\\s*(\\d+)`).exec(style);
+    if (value) channels.push(parseInt(value[1], 10));
+  }
+
+  const id = getAttributeValue(label, "id");
+  const tooltip = id ? cssSelect.selectOne(`tool-tip[for="${id}"]`, row) : null;
+
+  return {
+    name: getAttributeValue(label, "data-name") ?? textContent(label).trim(),
+    // GitHub's own default gray, for a label whose color it did not spell out.
+    color:
+      channels.length === 3
+        ? channels.map((c) => c.toString(16).padStart(2, "0")).join("")
+        : "ededed",
+    description: tooltip ? textContent(tooltip).trim() || null : null,
+  };
+}
+
 export async function getGitHubIssues(
   owner: string,
   repo: string,
@@ -793,9 +822,15 @@ export async function getGitHubIssues(
   }
 
   const issues: Issue[] = issuesQuery.result.data.repository.search.edges.map((edge) => {
-    const { number, title, titleHtml, state, createdAt } = edge.node;
+    const { number, title, titleHtml, state, createdAt, labels } = edge.node;
     const finalTitle = (title || titleHtml || "").replace(/<[^>]+>/g, "");
-    return { number, title: finalTitle, state, createdAt };
+    return {
+      number,
+      title: finalTitle,
+      state,
+      createdAt,
+      labels: (labels?.edges ?? []).map((label) => parseIssueLabel(label.node)),
+    };
   });
 
   return { repo: { owner, name: repo }, issues, q };
@@ -812,10 +847,6 @@ function issueAssociation(association: string | undefined): string | null {
   if (!association || association === "NONE") return null;
   const words = association.toLowerCase().replace(/_/g, " ");
   return words.charAt(0).toUpperCase() + words.slice(1);
-}
-
-function parseIssueLabel(label: IssueLabelNode): IssueLabel {
-  return { name: label.name, color: label.color, description: label.description ?? null };
 }
 
 function parseIssueComment(node: IssueTimelineNode): IssueComment {
@@ -1008,9 +1039,16 @@ export async function getGitHubPulls(
       ? "MERGED"
       : ariaLabel.includes("Closed")
         ? "CLOSED"
-        : "OPEN";
+        : ariaLabel.includes("Draft")
+          ? "DRAFT"
+          : "OPEN";
 
-    pulls.push({ number, title, state, createdAt });
+    const labels: IssueLabel[] = [];
+    for (const label of cssSelect.selectAll("a.IssueLabel", row) as unknown as Element[]) {
+      labels.push(parseRowLabel(label, row));
+    }
+
+    pulls.push({ number, title, state, createdAt, labels });
   }
 
   return { repo: { owner, name: repo }, pulls, q };
