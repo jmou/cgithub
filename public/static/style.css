@@ -382,6 +382,53 @@ pre.box {
   font-weight: bold;
 }
 
+/* GitHub's `> [!NOTE]` style alerts. */
+.markdown-alert {
+  --alert-color: var(--link-color);
+  margin: .5em 0;
+  padding: .25rem 1rem;
+  border-left: .25rem solid var(--alert-color);
+
+  > :first-child {
+    margin-top: 0;
+  }
+  > :last-child {
+    margin-bottom: 0;
+  }
+}
+
+.markdown-alert-title {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  font-weight: bold;
+  color: var(--alert-color);
+
+  svg {
+    fill: currentColor;
+  }
+}
+
+.markdown-alert-title + * {
+  margin-top: .25rem;
+}
+
+.markdown-alert-tip {
+  --alert-color: var(--success-color);
+}
+
+.markdown-alert-important {
+  --alert-color: light-dark(oklch(50% 0.2 300), oklch(70% 0.15 300));
+}
+
+.markdown-alert-warning {
+  --alert-color: light-dark(oklch(55% 0.13 75), oklch(75% 0.13 75));
+}
+
+.markdown-alert-caution {
+  --alert-color: light-dark(oklch(50% 0.18 25), oklch(70% 0.15 25));
+}
+
 .release > header, .wiki > header, .comment > header {
   display: flex;
   align-items: baseline;
