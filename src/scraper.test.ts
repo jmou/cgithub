@@ -45,6 +45,10 @@ describe("GitHub scraper", () => {
 
       assert.ok(data.items.length > 0);
       assert.ok(typeof data.overviewHtml?.["README.md"] === "string");
+
+      assert.ok(data.tabs?.includes("issues"));
+      assert.ok(data.tabs?.includes("pull-requests"));
+      assert.ok(!data.tabs?.includes("wiki"));
     });
 
     it("should fetch tree", async () => {
@@ -434,6 +438,7 @@ describe("GitHub scraper", () => {
       assert.strictEqual(data.repo.owner, "microsoft");
       assert.strictEqual(data.repo.name, "vscode");
       assert.strictEqual(data.title, "Home");
+      assert.ok(data.tabs?.includes("wiki"));
       assert.strictEqual(data.updatedBy, "Greg Van Liew");
       assert.strictEqual(data.updatedAt, "2019-11-22T03:08:32Z");
 
@@ -494,6 +499,14 @@ describe("GitHub scraper", () => {
       assert.ok(home);
       assert.strictEqual(home.href, "/ariya/phantomjs/wiki");
       assert.strictEqual(home.updatedAt, "2018-02-08T18:57:56Z");
+    });
+
+    it("should leave out the tabs of features a repository has disabled", async () => {
+      const data = await getGitHubReleases("torvalds", "linux");
+
+      assert.ok(data.tabs?.includes("code"));
+      assert.ok(!data.tabs?.includes("issues"));
+      assert.ok(!data.tabs?.includes("pull-requests"));
     });
 
     it("should redirect to the repository when it has no wiki", async () => {

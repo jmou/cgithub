@@ -297,7 +297,12 @@ interface GitHubCommon {
   };
 }
 
-interface GitHubNav extends GitHubCommon {
+interface GitHubRepoPage extends GitHubCommon {
+  // Enabled features, like issues or wiki.
+  tabs: string[] | null;
+}
+
+interface GitHubNav extends GitHubRepoPage {
   branch: string;
   path: string;
 }
@@ -347,12 +352,12 @@ interface Issue {
   numPRs?: number;
 }
 
-export interface GitHubIssues extends GitHubCommon {
+export interface GitHubIssues extends GitHubRepoPage {
   issues: Issue[];
   q?: string;
 }
 
-export interface GitHubPulls extends GitHubCommon {
+export interface GitHubPulls extends GitHubRepoPage {
   pulls: Issue[];
   q?: string;
 }
@@ -384,7 +389,7 @@ export type IssueTimelineItem =
   | ({ kind: "comment" } & IssueComment)
   | ({ kind: "event" } & IssueEvent);
 
-export interface GitHubIssue extends GitHubCommon {
+export interface GitHubIssue extends GitHubRepoPage {
   number: number;
   titleHtml: string;
   state: string;
@@ -437,7 +442,7 @@ export interface DiscussionComment {
   hiddenReplies: number;
 }
 
-export interface GitHubDiscussions extends GitHubCommon {
+export interface GitHubDiscussions extends GitHubRepoPage {
   discussions: DiscussionSummary[];
   categories: DiscussionCategory[];
   // The category the list is narrowed to, if any.
@@ -445,7 +450,7 @@ export interface GitHubDiscussions extends GitHubCommon {
   q?: string;
 }
 
-export interface GitHubDiscussion extends GitHubCommon {
+export interface GitHubDiscussion extends GitHubRepoPage {
   number: number;
   titleHtml: string;
   author: string | null;
@@ -520,11 +525,11 @@ export interface ReleaseAsset {
   publishedAt?: string;
 }
 
-export interface GitHubReleases extends GitHubCommon {
+export interface GitHubReleases extends GitHubRepoPage {
   releases: Release[];
 }
 
-export interface GitHubRelease extends GitHubCommon {
+export interface GitHubRelease extends GitHubRepoPage {
   release: Release;
 }
 
@@ -534,7 +539,7 @@ export interface WikiPage {
   updatedAt?: string;
 }
 
-export interface GitHubWiki extends GitHubCommon {
+export interface GitHubWiki extends GitHubRepoPage {
   title: string;
   updatedBy: string | null;
   updatedAt: string | null;
@@ -544,7 +549,7 @@ export interface GitHubWiki extends GitHubCommon {
   pages: WikiPage[];
 }
 
-export interface GitHubWikiPages extends GitHubCommon {
+export interface GitHubWikiPages extends GitHubRepoPage {
   pages: WikiPage[];
 }
 
@@ -657,7 +662,13 @@ function extractOverviewHtml(
   return Object.keys(result).length > 0 ? result : undefined;
 }
 
-function extractGitHub<T>(payload: AppPayload | null, extra: T): GitHubNav & T {
+function parseRepoTabs(html: string): string[] | null {
+  const nav = /<nav\b[^>]*\baria-label="Repository"[^>]*>([\s\S]*?)<\/nav>/.exec(html);
+  if (!nav) return null;
+  return Array.from(nav[1].matchAll(/\bid="([a-z-]+)-tab"/g), (match) => match[1]);
+}
+
+function extractGitHub<T>(html: string, payload: AppPayload | null, extra: T): GitHubNav & T {
   const layoutRoute = payload?.codeViewLayoutRoute;
   if (layoutRoute === undefined) {
     throw new Error("Missing codeViewLayoutRoute");
@@ -668,6 +679,7 @@ function extractGitHub<T>(payload: AppPayload | null, extra: T): GitHubNav & T {
       owner: layoutRoute.repo.ownerLogin,
       name: layoutRoute.repo.name,
     },
+    tabs: parseRepoTabs(html),
     branch: layoutRoute.refInfo.name,
     path: layoutRoute.path,
     ...extra,
@@ -695,7 +707,7 @@ export async function getGitHubRepo(owner: string, repo: string): Promise<GitHub
   };
   const overviewHtml = extractOverviewHtml(repoRoute.overview?.overviewFiles);
 
-  return extractGitHub(payload, { items: repoRoute.tree.items, info, overviewHtml });
+  return extractGitHub(html, payload, { items: repoRoute.tree.items, info, overviewHtml });
 }
 
 export async function getGitHubTree(
@@ -715,7 +727,7 @@ export async function getGitHubTree(
 
   const overviewHtml = extractOverviewHtml(treeRoute.tree.readme ? [treeRoute.tree.readme] : []);
 
-  return extractGitHub(payload, { items: treeRoute.tree.items, overviewHtml });
+  return extractGitHub(html, payload, { items: treeRoute.tree.items, overviewHtml });
 }
 
 export async function getGitHubBlob(
@@ -748,7 +760,7 @@ export async function getGitHubBlob(
     size += ` / ${blob.headerInfo.lineInfo.truncatedSloc} loc`;
   }
 
-  return extractGitHub(payload, {
+  return extractGitHub(html, payload, {
     language: blob.language || null,
     size,
     image: blob.image,
@@ -833,7 +845,7 @@ export async function getGitHubIssues(
     };
   });
 
-  return { repo: { owner, name: repo }, issues, q };
+  return { repo: { owner, name: repo }, tabs: parseRepoTabs(html), issues, q };
 }
 
 // GitHub's payloads carry absolute URLs; the same paths on our host are ours.
@@ -988,6 +1000,7 @@ export async function getGitHubIssue(
 
   return {
     repo: { owner, name: repo },
+    tabs: parseRepoTabs(html),
     number: issue.number,
     titleHtml: issue.titleHTML,
     state: issue.state,
@@ -1051,7 +1064,7 @@ export async function getGitHubPulls(
     pulls.push({ number, title, state, createdAt, labels });
   }
 
-  return { repo: { owner, name: repo }, pulls, q };
+  return { repo: { owner, name: repo }, tabs: parseRepoTabs(html), pulls, q };
 }
 
 // A category link names the category on its own in a discussion's header and
@@ -1128,6 +1141,7 @@ export async function getGitHubDiscussions(
 
   return {
     repo: { owner, name: repo },
+    tabs: parseRepoTabs(html),
     discussions,
     categories,
     category: categories.find((c) => c.slug === category) ?? null,
@@ -1220,6 +1234,7 @@ export async function getGitHubDiscussion(
 
   return {
     repo: { owner, name: repo },
+    tabs: parseRepoTabs(html),
     number,
     titleHtml: title ? getInnerHTML(title).trim() : "",
     author: meta ? selectText("a[href]", meta) : null,
@@ -1255,6 +1270,7 @@ export async function getGitHubCommits(
       owner,
       name: repo,
     },
+    tabs: parseRepoTabs(html),
     branch,
     path,
     commitGroups: commitsRoute.commitGroups,
@@ -1467,6 +1483,7 @@ export async function getGitHubReleases(owner: string, repo: string): Promise<Gi
       owner,
       name: repo,
     },
+    tabs: parseRepoTabs(html),
     releases,
   };
 }
@@ -1493,6 +1510,7 @@ export async function getGitHubReleaseBase(
       owner,
       name: repo,
     },
+    tabs: parseRepoTabs(html),
     release,
   };
 }
@@ -1763,6 +1781,7 @@ export async function getGitHubWiki(
 
   return {
     repo: { owner, name: repo },
+    tabs: parseRepoTabs(html),
     title: directText(heading),
     updatedBy,
     updatedAt: time ? getAttributeValue(time, "datetime") || null : null,
@@ -1792,5 +1811,5 @@ export async function getGitHubWikiPages(owner: string, repo: string): Promise<G
     pages.push({ name, href, updatedAt: time ? getAttributeValue(time, "datetime") : undefined });
   }
 
-  return { repo: { owner, name: repo }, pages };
+  return { repo: { owner, name: repo }, tabs: parseRepoTabs(html), pages };
 }

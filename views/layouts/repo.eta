@@ -11,13 +11,25 @@ layout("/layouts/base.eta", {
     <code>git clone https://github.com/<%= it.repo.owner %>/<%= it.repo.name %>.git</code>
     <code>git clone git@github.com:<%= it.repo.owner %>/<%= it.repo.name %>.git</code>
   </div>
+  <%
+  /* Without GitHub's navigation to go by, offer every tab. */
+  const hasTab = (tab) => !it.tabs || it.tabs.includes(tab)
+  %>
   <nav>
     <a href="/<%= it.repo.owner %>/<%= it.repo.name %>">Code</a>
-    <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/issues">Issues</a>
-    <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/pulls">Pull requests</a>
-    <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/discussions">Discussions</a>
+    <% if (hasTab("issues")) { %>
+      <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/issues">Issues</a>
+    <% } %>
+    <% if (hasTab("pull-requests")) { %>
+      <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/pulls">Pull requests</a>
+    <% } %>
+    <% if (hasTab("discussions")) { %>
+      <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/discussions">Discussions</a>
+    <% } %>
     <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/releases">Releases</a>
-    <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/wiki">Wiki</a>
+    <% if (hasTab("wiki")) { %>
+      <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/wiki">Wiki</a>
+    <% } %>
     <% if (it.branch) { %>
       <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/commits/<%= it.branch %><%= it.path && it.path !== '/' ? '/' + it.path : '' %>">Commits</a>
     <% } %>

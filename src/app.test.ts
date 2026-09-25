@@ -92,6 +92,26 @@ describe("sidebar fragment", () => {
   });
 });
 
+describe("repository navigation", () => {
+  const releases = { repo: { owner: "torvalds", name: "linux" }, releases: [] };
+
+  it("should only link to the tabs GitHub shows", () => {
+    const html = eta.render("releases.eta", { ...releases, tabs: ["code", "actions", "wiki"] });
+
+    assert.match(html, /href="\/torvalds\/linux\/wiki"/);
+    assert.doesNotMatch(html, /href="\/torvalds\/linux\/issues"/);
+    assert.doesNotMatch(html, /href="\/torvalds\/linux\/pulls"/);
+    assert.doesNotMatch(html, /href="\/torvalds\/linux\/discussions"/);
+  });
+
+  it("should link to every tab without GitHub's navigation to go by", () => {
+    const html = eta.render("releases.eta", { ...releases, tabs: null });
+
+    assert.match(html, /href="\/torvalds\/linux\/issues"/);
+    assert.match(html, /href="\/torvalds\/linux\/wiki"/);
+  });
+});
+
 describe("blob view", () => {
   const blob = {
     repo: { owner: "justrajdeep", name: "fonts" },
