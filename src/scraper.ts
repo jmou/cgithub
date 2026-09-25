@@ -211,6 +211,17 @@ interface CommitsRefRoute {
   commitGroups: CommitGroup[];
 }
 
+interface RepoPullsDashboardContentRoute {
+  results: {
+    number: number;
+    title: string;
+    createdAt: string;
+    // REPO_PULL_REQUEST_DISPLAY_STATE_OPEN, _CLOSED, _MERGED, or _DRAFT.
+    displayState: string;
+    labels?: IssueLabelNode[];
+  }[];
+}
+
 interface CodeViewBlobRoute {
   richText: string | null;
   renderedFileInfo?: { renderFileType: string | null } | null;
@@ -234,6 +245,7 @@ interface AppPayload {
   "codeViewBlobLayoutRoute.StyledBlob"?: CodeViewBlobLayoutRouteStyledBlob;
   codeViewBlobRoute?: CodeViewBlobRoute;
   commitsRefRoute?: CommitsRefRoute;
+  repoPullsDashboardContentRoute?: RepoPullsDashboardContentRoute;
   // Actually there may be other query types.
   preloadedQueries?: PreloadedQuery[];
 }
@@ -788,31 +800,6 @@ function parseIssueLabel(label: IssueLabelNode): IssueLabel {
   return { name: label.name, color: label.color, description: label.description ?? null };
 }
 
-// A label in a list row wears its color as the RGB channels GitHub's own CSS
-// mixes with, rather than as the hex its issue payloads carry, and keeps its
-// description in a tooltip pointing back at it.
-function parseRowLabel(label: Element, row: Element): IssueLabel {
-  const style = getAttributeValue(label, "style") ?? "";
-  const channels: number[] = [];
-  for (const channel of ["r", "g", "b"]) {
-    const value = new RegExp(`--label-${channel}:\\s*(\\d+)`).exec(style);
-    if (value) channels.push(parseInt(value[1], 10));
-  }
-
-  const id = getAttributeValue(label, "id");
-  const tooltip = id ? cssSelect.selectOne(`tool-tip[for="${id}"]`, row) : null;
-
-  return {
-    name: getAttributeValue(label, "data-name") ?? textContent(label).trim(),
-    // GitHub's own default gray, for a label whose color it did not spell out.
-    color:
-      channels.length === 3
-        ? channels.map((c) => c.toString(16).padStart(2, "0")).join("")
-        : "ededed",
-    description: tooltip ? textContent(tooltip).trim() || null : null,
-  };
-}
-
 export async function getGitHubIssues(
   owner: string,
   repo: string,
@@ -1032,37 +1019,18 @@ export async function getGitHubPulls(
 ): Promise<GitHubPulls> {
   const suffix = q ? `?q=${encodeURIComponent(q)}` : "";
   const html = await fetchGitHubPage(`${owner}/${repo}/pulls${suffix}`);
-  const document = parseDocument(html);
-
-  const pulls: Issue[] = [];
-  for (const row of cssSelect.selectAll(".js-issue-row", document) as unknown as Element[]) {
-    const id = getAttributeValue(row, "id"); // "issue_NNN"
-    const number = id ? parseInt(id.replace("issue_", ""), 10) : 0;
-    if (!number) continue;
-
-    const titleLink = cssSelect.selectOne("a.markdown-title", row);
-    const title = titleLink ? textContent(titleLink).trim() : "";
-
-    const timeElem = cssSelect.selectOne("relative-time", row);
-    const createdAt = timeElem ? getAttributeValue(timeElem, "datetime") || "" : "";
-
-    const stateSpan = cssSelect.selectOne(".tooltipped[aria-label]", row) as Element | null;
-    const ariaLabel = stateSpan ? (getAttributeValue(stateSpan, "aria-label") ?? "") : "";
-    const state = ariaLabel.includes("Merged")
-      ? "MERGED"
-      : ariaLabel.includes("Closed")
-        ? "CLOSED"
-        : ariaLabel.includes("Draft")
-          ? "DRAFT"
-          : "OPEN";
-
-    const labels: IssueLabel[] = [];
-    for (const label of cssSelect.selectAll("a.IssueLabel", row) as unknown as Element[]) {
-      labels.push(parseRowLabel(label, row));
-    }
-
-    pulls.push({ number, title, state, createdAt, labels });
+  const route = parsePayload(html)?.repoPullsDashboardContentRoute;
+  if (route === undefined) {
+    throw new Error("Could not find repoPullsDashboardContentRoute in embedded JSON");
   }
+
+  const pulls: Issue[] = route.results.map((result) => ({
+    number: result.number,
+    title: result.title,
+    state: result.displayState.replace(/^REPO_PULL_REQUEST_DISPLAY_STATE_/, ""),
+    createdAt: result.createdAt,
+    labels: (result.labels ?? []).map(parseIssueLabel),
+  }));
 
   return { repo: { owner, name: repo }, tabs: parseRepoTabs(html), pulls, q };
 }
