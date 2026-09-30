@@ -526,6 +526,12 @@ interface Release {
   tagName: string;
   title: string;
   publishedAt: string;
+  isLatest: boolean;
+  /** Login of the releaser; for a GitHub App, the app's slug. */
+  author?: string;
+  /** URL of the releaser, absolute for a GitHub App since /apps/ is not an owner. */
+  authorUrl?: string;
+  commitOid?: string;
   bodyHtml: string;
   assets?: ReleaseAsset[];
 }
@@ -1416,6 +1422,19 @@ function parseRelease(section: Element, title: string): Release {
   const relativeTime = cssSelect.selectOne("relative-time", section);
   const publishedAt = relativeTime ? getAttributeValue(relativeTime, "datetime") || "" : "";
 
+  const latestLabel = cssSelect.selectOne(".Label--success", section);
+  const isLatest = latestLabel ? textContent(latestLabel).trim() === "Latest" : false;
+
+  // The releaser, next to "released this"
+  const authorLink = cssSelect.selectOne("a.text-bold.color-fg-muted", section);
+  const author = authorLink ? textContent(authorLink).trim() || undefined : undefined;
+  const authorHref = authorLink ? getAttributeValue(authorLink, "href") : undefined;
+  const authorUrl = authorHref?.startsWith("/apps/") ? `https://github.com${authorHref}` : authorHref;
+
+  // The tagged commit
+  const commitLink = cssSelect.selectOne('a[data-hovercard-type="commit"]', section);
+  const commitOid = commitLink ? getAttributeValue(commitLink, "href")?.split("/").pop() : undefined;
+
   // Extract body HTML (markdown content)
   const body = cssSelect.selectOne(".markdown-body", section);
   const bodyHtml = body ? getInnerHTML(body).trim() : "";
@@ -1424,6 +1443,10 @@ function parseRelease(section: Element, title: string): Release {
     tagName,
     title,
     publishedAt,
+    isLatest,
+    author,
+    authorUrl,
+    commitOid,
     bodyHtml,
   };
 }

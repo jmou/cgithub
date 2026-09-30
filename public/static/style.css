@@ -438,6 +438,11 @@ pre.box {
   }
 }
 
+.release-detail {
+  margin-right: 1rem;
+  font-size: .8rem;
+}
+
 .wiki > footer {
   /* The wiki's _Footer page is rendered content, not a caption for the page. */
   font-size: .9rem;

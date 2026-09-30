@@ -1,11 +1,20 @@
 <div class="box release">
   <header>
-    <% if (it.linkToDetail) { %>
-      <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/releases/tag/<%= it.release.tagName %>">
+    <span>
+      <% if (it.linkToDetail) { %>
+        <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/releases/tag/<%= it.release.tagName %>"><%= it.release.title %></a>
+      <% } else { %>
         <%= it.release.title %>
-      </a>
-    <% } else { %>
-      <span><%= it.release.title %></span>
+      <% } %>
+      <% if (it.release.isLatest) { %>
+        <span class="pill state state-open">Latest</span>
+      <% } %>
+    </span>
+    <% if (it.release.author) { %>
+      <a class="release-detail" href="<%= it.release.authorUrl %>"><%= it.release.author %></a>
+    <% } %>
+    <% if (it.release.commitOid) { %>
+      <a class="release-detail" href="/<%= it.repo.owner %>/<%= it.repo.name %>/commit/<%= it.release.commitOid %>"><code><%= it.release.commitOid.slice(0, 7) %></code></a>
     <% } %>
     <% if (it.release.publishedAt) { %>
       <time class="timestamp" title="<%= it.release.publishedAt %>">

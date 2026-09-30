@@ -252,6 +252,10 @@ describe("GitHub scraper", () => {
       assert.ok(firstRelease.title.match(/^v\d/));
       assert.ok(firstRelease.publishedAt.length > 0);
       assert.ok(firstRelease.bodyHtml.length > 0);
+      assert.ok(firstRelease.isLatest);
+      assert.ok(firstRelease.commitOid?.match(/^[0-9a-f]{40}$/));
+      assert.ok(firstRelease.author);
+      assert.ok(data.releases.slice(1).every((release) => !release.isLatest));
     });
 
     it("should fetch latest commit for a path", async () => {
@@ -333,6 +337,10 @@ describe("GitHub scraper", () => {
       assert.ok(data.release.title.length > 0);
       assert.ok(data.release.publishedAt.length > 0);
       assert.ok(data.release.bodyHtml.length > 0);
+      assert.strictEqual(data.release.isLatest, false);
+      assert.strictEqual(data.release.author, "github-actions");
+      assert.strictEqual(data.release.authorUrl, "https://github.com/apps/github-actions");
+      assert.strictEqual(data.release.commitOid, "d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e");
       assert.ok(data.release.assets && data.release.assets.length >= 2);
       assert.strictEqual(data.release.assets[0].name, "Source code (zip)");
       assert.strictEqual(

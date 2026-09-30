@@ -14,7 +14,7 @@ Implemented:
 - Commit history (but this often results in 429 Too Many Requests on Cloudflare)
 - Issue and pull request lists and search
 - Discussions
-- Release lists and details
+- Release lists and details, with the releaser, tagged commit, and latest release
 - Wiki
 - User and organization profiles
 
