@@ -39,35 +39,17 @@ interface OverviewFile {
   richText?: string | null;
 }
 
-interface IssueNode {
-  number: number;
-  title?: string;
-  titleHtml?: string;
-  author?: {
-    login: string;
-  };
-  createdAt: string;
-  state: string;
-  labels?: {
-    edges: {
-      node: IssueLabelNode;
-    }[];
-  };
-}
-
-interface IssueIndexPageQuery {
-  queryName: "IssueIndexPageQuery";
-  result: {
-    data: {
-      repository: {
-        search: {
-          edges: {
-            node: IssueNode;
-          }[];
-        };
-      };
+interface IssuesIndexContentRoute {
+  results: {
+    issue: {
+      number: number;
+      title: string;
+      createdAt: string;
+      // REPO_ISSUE_STATE_OPEN or _CLOSED.
+      state: string;
+      labels?: IssueLabelNode[];
     };
-  };
+  }[];
 }
 
 interface IssueActor {
@@ -117,24 +99,19 @@ interface IssueViewerNode {
   assignedActors?: { nodes: IssueActor[] };
   milestone?: { title: string; url: string } | null;
   // The oldest page of the timeline; GitHub fetches the rest as you scroll.
-  frontTimelineItems: {
+  timelineItems: {
     totalCount: number;
     edges: { node: IssueTimelineNode }[];
   };
 }
 
-interface IssueViewerViewQuery {
-  queryName: "IssueViewerViewQuery";
-  result: {
-    data: {
-      repository: {
-        issue: IssueViewerNode;
-      };
+interface IssueViewerRoute {
+  data: {
+    repository: {
+      issue: IssueViewerNode;
     };
   };
 }
-
-type PreloadedQuery = IssueIndexPageQuery | IssueViewerViewQuery;
 
 type StylingDirective = [number, number, string];
 
@@ -246,8 +223,8 @@ interface AppPayload {
   codeViewBlobRoute?: CodeViewBlobRoute;
   commitsRefRoute?: CommitsRefRoute;
   repoPullsDashboardContentRoute?: RepoPullsDashboardContentRoute;
-  // Actually there may be other query types.
-  preloadedQueries?: PreloadedQuery[];
+  issuesIndexContentRoute?: IssuesIndexContentRoute;
+  issueViewerRoute?: IssueViewerRoute;
 }
 
 function escapeHtml(text: string): string {
@@ -683,7 +660,7 @@ function extractOverviewHtml(
 function parseRepoTabs(html: string): string[] | null {
   const nav = /<nav\b[^>]*\baria-label="Repository"[^>]*>([\s\S]*?)<\/nav>/.exec(html);
   if (!nav) return null;
-  return Array.from(nav[1].matchAll(/\bid="([a-z-]+)-tab"/g), (match) => match[1]);
+  return Array.from(nav[1].matchAll(/\bdata-tab-item="([a-z-]+)"/g), (match) => match[1]);
 }
 
 function extractGitHub<T>(html: string, payload: AppPayload | null, extra: T): GitHubNav & T {
@@ -814,29 +791,18 @@ export async function getGitHubIssues(
 ): Promise<GitHubIssues> {
   const suffix = q ? `?q=${encodeURIComponent(q)}` : "";
   const html = await fetchGitHubPage(`${owner}/${repo}/issues${suffix}`);
-  const payload = parsePayload(html);
-
-  let issuesQuery: IssueIndexPageQuery | undefined;
-  for (const query of payload?.preloadedQueries ?? []) {
-    if (query.queryName === "IssueIndexPageQuery") {
-      issuesQuery = query;
-    }
-  }
-  if (issuesQuery === undefined) {
-    throw new Error("Could not find IssueIndexPageQuery in embedded JSON");
+  const route = parsePayload(html)?.issuesIndexContentRoute;
+  if (route === undefined) {
+    throw new Error("Could not find issuesIndexContentRoute in embedded JSON");
   }
 
-  const issues: Issue[] = issuesQuery.result.data.repository.search.edges.map((edge) => {
-    const { number, title, titleHtml, state, createdAt, labels } = edge.node;
-    const finalTitle = (title || titleHtml || "").replace(/<[^>]+>/g, "");
-    return {
-      number,
-      title: finalTitle,
-      state,
-      createdAt,
-      labels: (labels?.edges ?? []).map((label) => parseIssueLabel(label.node)),
-    };
-  });
+  const issues: Issue[] = route.results.map(({ issue }) => ({
+    number: issue.number,
+    title: issue.title,
+    state: issue.state.replace(/^REPO_ISSUE_STATE_/, ""),
+    createdAt: issue.createdAt,
+    labels: (issue.labels ?? []).map(parseIssueLabel),
+  }));
 
   return { repo: { owner, name: repo }, tabs: parseRepoTabs(html), issues, q };
 }
@@ -957,20 +923,13 @@ export async function getGitHubIssue(
   number: number,
 ): Promise<GitHubIssue> {
   const html = await fetchGitHubPage(`${owner}/${repo}/issues/${number}`);
-  const payload = parsePayload(html);
-
-  let issue: IssueViewerNode | undefined;
-  for (const query of payload?.preloadedQueries ?? []) {
-    if (query.queryName === "IssueViewerViewQuery") {
-      issue = query.result.data.repository.issue;
-    }
-  }
+  const issue = parsePayload(html)?.issueViewerRoute?.data.repository.issue;
   if (issue === undefined) {
-    throw new Error("Could not find IssueViewerViewQuery in embedded JSON");
+    throw new Error("Could not find issueViewerRoute in embedded JSON");
   }
 
   const timeline: IssueTimelineItem[] = [];
-  for (const edge of issue.frontTimelineItems.edges) {
+  for (const edge of issue.timelineItems.edges) {
     if (edge.node.__typename === "IssueComment") {
       timeline.push({ kind: "comment", ...parseIssueComment(edge.node) });
       continue;
@@ -1014,7 +973,7 @@ export async function getGitHubIssue(
       bodyHtml: issue.bodyHTML,
     },
     timeline,
-    hiddenItems: issue.frontTimelineItems.totalCount - issue.frontTimelineItems.edges.length,
+    hiddenItems: issue.timelineItems.totalCount - issue.timelineItems.edges.length,
   };
 }
 
