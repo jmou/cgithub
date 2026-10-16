@@ -12,7 +12,7 @@ const stateText = it.state !== "CLOSED"
       : "Closed"
 %>
 
-<div class="box">
+<section>
   <h2><%~ it.titleHtml %></h2>
 
   #<%= it.number %>
@@ -31,7 +31,7 @@ const stateText = it.state !== "CLOSED"
   <% if (it.milestone) { %>
     milestone <a href="<%= it.milestone.href %>"><%= it.milestone.title %></a>
   <% } %>
-</div>
+</section>
 
 <%~ include("./_issueComment.eta", { comment: it.body }) %>
 

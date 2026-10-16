@@ -4,7 +4,7 @@ it.path = `discussions/${it.number}`
 it.searchType = "discussions"
 %>
 
-<div class="box">
+<section>
   <h2><%~ it.titleHtml %></h2>
 
   #<%= it.number %>
@@ -14,7 +14,7 @@ it.searchType = "discussions"
   <% if (it.answerAnchor) { %>
     <a class="answered pill" href="#<%= it.answerAnchor %>">Answered</a>
   <% } %>
-</div>
+</section>
 
 <%~ include("./_discussionComment.eta", { comment: it.body }) %>
 
