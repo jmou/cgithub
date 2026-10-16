@@ -5,7 +5,7 @@ layout("/layouts/base.eta", {
 })
 %>
 
-<div class="box">
+<header class="page-header">
   <div class="repo"><a href="/<%= it.repo.owner %>"><%= it.repo.owner %></a>/<a href="/<%= it.repo.owner %>/<%= it.repo.name %>"><%= it.repo.name %></a></div>
   <div class="clone">
     <code>git clone https://github.com/<%= it.repo.owner %>/<%= it.repo.name %>.git</code>
@@ -44,7 +44,7 @@ layout("/layouts/base.eta", {
     </select>
     <button type="submit">Search</button>
   </form>
-</div>
+</header>
 
 <%~ it.body %>
 

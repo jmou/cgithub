@@ -47,7 +47,9 @@
 }
 
 body {
-  margin: 1rem;
+  --page-margin: 1rem;
+
+  margin: var(--page-margin);
   font-family: Helvetica, Arial, sans-serif;
   background: var(--body-background);
   color: var(--text-color);
@@ -137,6 +139,24 @@ section {
   }
 }
 
+/* A band across the full width of the page, above everything else. */
+.page-header {
+  /* Contain the floated avatar. */
+  display: flow-root;
+  margin: calc(-1 * var(--page-margin));
+  margin-bottom: var(--page-margin);
+  padding: .75rem var(--page-margin);
+  background: var(--shade-background);
+  border-bottom: 1px solid var(--border-color);
+
+  > *:first-child {
+    margin-top: 0;
+  }
+  > *:last-child {
+    margin-bottom: 0;
+  }
+}
+
 body > footer {
   margin-top: 1rem;
   text-align: center;
@@ -171,7 +191,8 @@ body > footer {
     cursor: default;
 
     &:hover {
-      background: var(--shade-background);
+      /* The page header is already shaded. */
+      background: var(--body-background);
     }
   }
 }
