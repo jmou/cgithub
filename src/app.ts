@@ -11,6 +11,8 @@ import {
   getGitHubIssues,
   getGitHubSidebar,
   getGitHubLatestCommit,
+  getGitHubOrgDiscussion,
+  getGitHubOrgDiscussions,
   getGitHubOwner,
   getGitHubPulls,
   getGitHubRaw,
@@ -229,6 +231,28 @@ export function createApp(eta: Eta) {
     const { owner, repo } = c.req.param();
     const q = c.req.query("q");
     return c.render("pulls.eta", await getGitHubPulls(owner, repo, { q }));
+  });
+
+  // Organization discussions are kept in one of the organization's
+  // repositories, and render as that repository's.
+  app.get("/orgs/:org/discussions", async (c) => {
+    const { org } = c.req.param();
+    const q = c.req.query("discussions_q");
+    return c.render("discussions.eta", await getGitHubOrgDiscussions(org, { q }));
+  });
+
+  app.get("/orgs/:org/discussions/categories/:category", async (c) => {
+    const { org, category } = c.req.param();
+    const q = c.req.query("discussions_q");
+    return c.render("discussions.eta", await getGitHubOrgDiscussions(org, { q, category }));
+  });
+
+  app.get("/orgs/:org/discussions/:number", async (c) => {
+    const { org, number } = c.req.param();
+    if (!/^\d+$/.test(number)) {
+      return redirectToGitHub(c);
+    }
+    return c.render("discussion.eta", await getGitHubOrgDiscussion(org, Number(number)));
   });
 
   app.get("/:owner/:repo/discussions", async (c) => {

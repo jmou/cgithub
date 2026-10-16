@@ -681,6 +681,13 @@ describe("discussions", () => {
     assert.strictEqual(res.status, 200);
     assert.match(await res.text(), /url=https:\/\/github.com\/jj-vcs\/jj\/discussions\/new"/);
   });
+
+  it("should only scrape an organization discussion path that names a number", async () => {
+    const res = await app.request("http://cgithub.example/orgs/honojs/discussions/new");
+
+    assert.strictEqual(res.status, 200);
+    assert.match(await res.text(), /url=https:\/\/github.com\/orgs\/honojs\/discussions\/new"/);
+  });
 });
 
 describe("global search", () => {

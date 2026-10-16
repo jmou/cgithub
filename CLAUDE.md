@@ -39,6 +39,7 @@ pnpm test
 - `GET /:owner/:repo/discussions` - Discussion list, searched with `discussions_q`
 - `GET /:owner/:repo/discussions/categories/:category` - Discussions in one category
 - `GET /:owner/:repo/discussions/:number` - A discussion, its comments, and their replies
+- `GET /orgs/:org/discussions`, `/categories/:category`, `/:number` - Organization discussions, shown as the repository that holds them
 - `GET /:owner/:repo/wiki` - Wiki home page
 - `GET /:owner/:repo/wiki/:page` - Wiki page (also `/:page/:oid` for a revision)
 - `GET /:owner/:repo/wiki/_pages` - Wiki page index

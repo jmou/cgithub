@@ -1049,14 +1049,41 @@ function parseDiscussionSummary(row: Element): DiscussionSummary | null {
   };
 }
 
+// Organization discussions live in one of the organization's repositories,
+// which their pages name only in GitHub's analytics metadata.
+function parseDiscussionRepo(html: string): GitHubRepoPage["repo"] {
+  const match = /<meta name="octolytics-dimension-repository_nwo" content="([^"/]+)\/([^"]+)"/.exec(
+    html,
+  );
+  if (!match) {
+    throw new Error("Could not find the repository of the organization discussions");
+  }
+  return { owner: match[1], name: match[2] };
+}
+
 export async function getGitHubDiscussions(
   owner: string,
   repo: string,
-  { q, category }: { q?: string; category?: string } = {},
+  options: { q?: string; category?: string } = {},
 ): Promise<GitHubDiscussions> {
-  const base = category
-    ? `${owner}/${repo}/discussions/categories/${category}`
-    : `${owner}/${repo}/discussions`;
+  return fetchDiscussionList(`${owner}/${repo}/discussions`, () => ({ owner, name: repo }), options);
+}
+
+// The list GitHub serves at /orgs/:org/discussions, which is otherwise the
+// same as a repository's.
+export async function getGitHubOrgDiscussions(
+  org: string,
+  options: { q?: string; category?: string } = {},
+): Promise<GitHubDiscussions> {
+  return fetchDiscussionList(`orgs/${org}/discussions`, parseDiscussionRepo, options);
+}
+
+async function fetchDiscussionList(
+  path: string,
+  parseRepo: (html: string) => GitHubRepoPage["repo"],
+  { q, category }: { q?: string; category?: string },
+): Promise<GitHubDiscussions> {
+  const base = category ? `${path}/categories/${category}` : path;
   const suffix = q ? `?discussions_q=${encodeURIComponent(q)}` : "";
   const html = await fetchGitHubPage(`${base}${suffix}`);
   const document = parseDocument(html);
@@ -1073,7 +1100,7 @@ export async function getGitHubDiscussions(
   const categories = parseDiscussionCategories(document);
 
   return {
-    repo: { owner, name: repo },
+    repo: parseRepo(html),
     tabs: parseRepoTabs(html),
     discussions,
     categories,
@@ -1145,6 +1172,24 @@ export async function getGitHubDiscussion(
   number: number,
 ): Promise<GitHubDiscussion> {
   const html = await fetchGitHubPage(`${owner}/${repo}/discussions/${number}`);
+  return parseDiscussion(html, { owner, name: repo }, number);
+}
+
+// GitHub redirects a repository's discussion here when the repository holds
+// its organization's discussions.
+export async function getGitHubOrgDiscussion(
+  org: string,
+  number: number,
+): Promise<GitHubDiscussion> {
+  const html = await fetchGitHubPage(`orgs/${org}/discussions/${number}`);
+  return parseDiscussion(html, parseDiscussionRepo(html), number);
+}
+
+function parseDiscussion(
+  html: string,
+  repo: GitHubRepoPage["repo"],
+  number: number,
+): GitHubDiscussion {
   const document = parseDocument(html);
 
   const header = cssSelect.selectOne("#partial-discussion-header", document) as Element | null;
@@ -1166,7 +1211,7 @@ export async function getGitHubDiscussion(
   const answer = cssSelect.selectOne(".js-discussions-goto-answer-button", header);
 
   return {
-    repo: { owner, name: repo },
+    repo,
     tabs: parseRepoTabs(html),
     number,
     titleHtml: title ? getInnerHTML(title).trim() : "",

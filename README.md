@@ -13,7 +13,7 @@ Implemented:
 - Directory listing and file browsing (`tree`/`blob`)
 - Commit history (but this often results in 429 Too Many Requests on Cloudflare)
 - Issue and pull request lists and search
-- Discussions
+- Discussions, including organization discussions
 - Release lists and details, with the releaser, tagged commit, and latest release
 - Wiki
 - User and organization profiles

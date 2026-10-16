@@ -9,6 +9,8 @@ import {
   getGitHubIssues,
   getGitHubSidebar,
   getGitHubLatestCommit,
+  getGitHubOrgDiscussion,
+  getGitHubOrgDiscussions,
   getGitHubPulls,
   getGitHubRaw,
   getGitHubRefs,
@@ -751,6 +753,34 @@ describe("GitHub scraper", () => {
       assert.ok(parent);
       assert.strictEqual(parent.hiddenReason, null);
       assert.ok(parent.bodyHtml !== "");
+    });
+
+    // GitHub redirects /honojs/hono/discussions/3000 to the organization's
+    // URL, which names no repository in its path.
+    it("should fetch an organization discussion as its repository's", async () => {
+      await assert.rejects(getGitHubDiscussion("honojs", "hono", 3000), (err) => {
+        assert(err instanceof InternalRedirectError);
+        assert.strictEqual(err.location, "/orgs/honojs/discussions/3000");
+        return true;
+      });
+
+      const data = await getGitHubOrgDiscussion("honojs", 3000);
+
+      assert.strictEqual(data.repo.owner, "honojs");
+      assert.strictEqual(data.repo.name, "hono");
+      assert.strictEqual(data.number, 3000);
+      assert.ok(data.titleHtml !== "");
+      assert.strictEqual(data.category?.slug, "general");
+      assert.match(data.body.anchor, /^discussion-\d+$/);
+    });
+
+    it("should fetch the organization discussion list as its repository's", async () => {
+      const data = await getGitHubOrgDiscussions("honojs");
+
+      assert.strictEqual(data.repo.owner, "honojs");
+      assert.strictEqual(data.repo.name, "hono");
+      assert.ok(data.discussions.length > 0);
+      assert.ok(data.discussions.every((discussion) => discussion.number > 0));
     });
 
     it("should throw for a repository with discussions turned off", async () => {
