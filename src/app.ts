@@ -49,6 +49,9 @@ export function createApp(eta: Eta) {
       c.html(eta.render(template, { ...data, githubUrl: githubUrlFor(c), buildCommit })),
     );
     await next();
+    // Keep pages out of search results; public/robots.txt already asks
+    // crawlers not to fetch them.
+    c.header("X-Robots-Tag", "noindex, nofollow");
   });
 
   // Redirect off-domain.

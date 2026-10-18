@@ -253,6 +253,14 @@ describe("embedded files", () => {
     assert.strictEqual(await res.text(), "%PDF-1.6");
   });
 
+  it("should ask search engines not to index it", async (t) => {
+    stubGitHub(t, "%PDF-1.6", "application/pdf");
+
+    const res = await app.request("http://cgithub.example/mozilla/pdf.js/embed/pdf/master/doc.pdf");
+
+    assert.strictEqual(res.headers.get("X-Robots-Tag"), "noindex, nofollow");
+  });
+
   it("should pass on a type GitHub already got right", async (t) => {
     stubGitHub(t, "%PDF-1.6", "application/pdf");
 
