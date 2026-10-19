@@ -258,7 +258,7 @@ describe("embedded files", () => {
 
     const res = await app.request("http://cgithub.example/mozilla/pdf.js/embed/pdf/master/doc.pdf");
 
-    assert.strictEqual(res.headers.get("X-Robots-Tag"), "noindex, nofollow");
+    assert.strictEqual(res.headers.get("X-Robots-Tag"), "noindex, nofollow, noarchive");
   });
 
   it("should pass on a type GitHub already got right", async (t) => {

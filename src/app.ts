@@ -49,9 +49,9 @@ export function createApp(eta: Eta) {
       c.html(eta.render(template, { ...data, githubUrl: githubUrlFor(c), buildCommit })),
     );
     await next();
-    // Keep pages out of search results; public/robots.txt already asks
+    // Keep pages out of search results and caches; public/robots.txt asks
     // crawlers not to fetch them. public/_headers covers static files.
-    c.header("X-Robots-Tag", "noindex, nofollow");
+    c.header("X-Robots-Tag", "noindex, nofollow, noarchive");
   });
 
   // Redirect off-domain.
