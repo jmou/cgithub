@@ -175,6 +175,8 @@ interface CodeViewBlobLayoutRoute {
     headerInfo: BlobHeaderInfo;
     language: string | null;
     image: boolean;
+    // False for binary files, whose lines GitHub still colorizes as raw bytes.
+    viewable: boolean;
   };
 }
 
@@ -741,10 +743,13 @@ export async function getGitHubBlob(
     throw new Error("Could not find blob data in embedded JSON");
   }
 
-  let htmlLines = styledBlob?.colorizedLines ?? null;
-  const stylingDirectives = styledBlob?.stylingDirectives;
-  if (!htmlLines && stylingDirectives && styledBlob?.rawLines) {
-    htmlLines = styledBlob.rawLines.map((line, i) => applyStyling(line, stylingDirectives[i]));
+  let htmlLines = null;
+  if (blob.viewable) {
+    htmlLines = styledBlob?.colorizedLines ?? null;
+    const stylingDirectives = styledBlob?.stylingDirectives;
+    if (!htmlLines && stylingDirectives && styledBlob?.rawLines) {
+      htmlLines = styledBlob.rawLines.map((line, i) => applyStyling(line, stylingDirectives[i]));
+    }
   }
 
   let size = blob.headerInfo.blobSize;
