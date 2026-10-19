@@ -50,7 +50,7 @@ export function createApp(eta: Eta) {
     );
     await next();
     // Keep pages out of search results; public/robots.txt already asks
-    // crawlers not to fetch them.
+    // crawlers not to fetch them. public/_headers covers static files.
     c.header("X-Robots-Tag", "noindex, nofollow");
   });
 
