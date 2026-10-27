@@ -3,6 +3,10 @@
   "name": "cgithub",
   "main": "src/worker.ts",
   "compatibility_date": "2026-07-01",
+  // Wrangler creates the DNS record and certificate for a custom domain.
+  "routes": [
+    { "pattern": "cgithub.nitpicks.org", "custom_domain": true }
+  ],
   // Serve public/ (i.e. /static/*) directly from Cloudflare's edge; requests
   // that don't match a file fall through to the worker.
   "assets": {
