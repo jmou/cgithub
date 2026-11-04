@@ -481,7 +481,10 @@ describe("issues", () => {
     assert.match(html, /<h2><code>--allow-forking=false<\/code> not interpreted correctly<\/h2>/);
     assert.match(html, /#10000/);
     assert.match(html, /<span class="pill state state-closed">Closed as not planned<\/span>/);
-    assert.match(html, /<div class="box comment" id="issue-2716088121">\s*<header>\s*<span>\s*<a href="\/celloza">celloza<\/a>/);
+    assert.match(
+      html,
+      /<div class="box comment" id="issue-2716088121">\s*<header>\s*<span>\s*<a href="\/celloza">celloza<\/a>/,
+    );
     assert.match(html, /<div class="box comment" id="issuecomment-2517193151">/);
     assert.match(html, /<span class="pill">Member<\/span>/);
     // The search box searches issues from an issue.
@@ -786,6 +789,24 @@ describe("redirects to GitHub", () => {
 
     assert.strictEqual(res.status, 200);
     assert.match(await res.text(), /url=https:\/\/github.com\/notifications\?query=is%3Aunread"/);
+  });
+
+  it("should redirect profile tabs other than repositories", async () => {
+    const res = await app.request("http://cgithub.example/torvalds?tab=stars");
+
+    assert.strictEqual(res.status, 200);
+    assert.match(await res.text(), /url=https:\/\/github.com\/torvalds\?tab=stars"/);
+  });
+
+  it("should redirect filtered repository tabs", async () => {
+    const user = await app.request("http://cgithub.example/torvalds?tab=repositories&q=linux");
+    assert.match(
+      await user.text(),
+      /url=https:\/\/github.com\/torvalds\?tab=repositories&amp;q=linux"/,
+    );
+
+    const org = await app.request("http://cgithub.example/orgs/github/repositories?page=2");
+    assert.match(await org.text(), /url=https:\/\/github.com\/orgs\/github\/repositories\?page=2"/);
   });
 
   it("should redirect raw file requests to raw.githubusercontent.com", async () => {

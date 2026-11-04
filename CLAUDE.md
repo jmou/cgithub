@@ -30,6 +30,7 @@ pnpm test
 
 **Routes:**
 - `GET /:owner` - User or organization profile with pinned repositories
+- `GET /:owner?tab=repositories`, `GET /orgs/:org/repositories` - A user's or organization's repositories tab
 - `GET /:owner/:repo` - Repository info with directory listing
 - `GET /:owner/:repo/tree/:branch/:path*` - Directory listing
 - `GET /:owner/:repo/blob/:branch/:path` - File content view

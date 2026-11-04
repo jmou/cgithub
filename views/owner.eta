@@ -1,4 +1,7 @@
-<% layout("/layouts/base.eta", { title: it.name ? `${it.name} (${it.login})` : it.login }) %>
+<%
+const ownerTitle = it.name ? `${it.name} (${it.login})` : it.login;
+layout("/layouts/base.eta", { title: it.tab === "repositories" ? `${ownerTitle} repositories` : ownerTitle });
+%>
 
 <header class="page-header repo-info">
   <% if (it.avatarUrl) { %>
@@ -23,6 +26,9 @@
   <% } %>
   <% if (it.nav.length > 0) { %>
     <nav>
+      <% if (it.tab !== "overview") { %>
+        <a href="/<%= it.login %>">Overview</a>
+      <% } %>
       <% for (const item of it.nav) { %>
         <a href="<%= item.href %>"><%= item.text %></a>
       <% } %>
@@ -46,4 +52,8 @@
       <%~ include("./_ownerRepo", { repo, login: it.login }) %>
     <% } %>
   </section>
+<% } %>
+
+<% if (it.hasMoreRepos) { %>
+  <div class="box placeholder">More repositories are only on GitHub.</div>
 <% } %>

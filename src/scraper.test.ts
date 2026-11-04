@@ -17,8 +17,10 @@ import {
   getGitHubRelease,
   getGitHubReleases,
   getGitHubRepo,
+  getGitHubOrgRepositories,
   getGitHubOwner,
   getGitHubTree,
+  getGitHubUserRepositories,
   getGitHubWiki,
   getGitHubWikiPages,
   ExternalRedirectError,
@@ -863,6 +865,57 @@ describe("GitHub scraper", () => {
       ]);
       const reposTab = data.nav.find((item) => item.text === "Repositories");
       assert.strictEqual(reposTab?.href, "/orgs/github/repositories");
+    });
+
+    it("should fetch user repositories tab", async () => {
+      const data = await getGitHubUserRepositories("torvalds");
+
+      assert.strictEqual(data.type, "user");
+      assert.strictEqual(data.tab, "repositories");
+      assert.strictEqual(data.login, "torvalds");
+      assert.strictEqual(data.name, "Linus Torvalds");
+      assert.deepStrictEqual(data.pinned, []);
+
+      assert.ok(data.repos.length > 0);
+      assert.ok(data.repos.every((repo) => repo.owner === "torvalds"));
+      const linux = data.repos.find((repo) => repo.name === "linux");
+      assert.ok(linux);
+      assert.strictEqual(linux.description, "Linux kernel source tree");
+      assert.strictEqual(linux.language, "C");
+      assert.ok(linux.stars);
+      assert.ok(linux.forks);
+      assert.strictEqual(data.hasMoreRepos, false);
+    });
+
+    it("should report further pages of user repositories", async () => {
+      const data = await getGitHubUserRepositories("sindresorhus");
+
+      assert.strictEqual(data.repos.length, 30);
+      assert.strictEqual(data.hasMoreRepos, true);
+    });
+
+    it("should send an organization's repositories tab to its own page", async () => {
+      await assert.rejects(getGitHubUserRepositories("github"), (err) => {
+        assert(err instanceof InternalRedirectError, "error should be an InternalRedirectError");
+        assert.strictEqual(err.location, "/orgs/github/repositories");
+        return true;
+      });
+    });
+
+    it("should fetch organization repositories tab", async () => {
+      const data = await getGitHubOrgRepositories("github");
+
+      assert.strictEqual(data.type, "organization");
+      assert.strictEqual(data.tab, "repositories");
+      assert.strictEqual(data.login, "github");
+      assert.strictEqual(data.name, "GitHub");
+      assert.deepStrictEqual(data.pinned, []);
+
+      assert.strictEqual(data.repos.length, 30);
+      assert.ok(data.repos.every((repo) => repo.owner === "github"));
+      assert.ok(data.repos.some((repo) => repo.description && repo.language));
+      assert.ok(data.repos.some((repo) => repo.stars && /^[\d,]+$/.test(repo.stars)));
+      assert.strictEqual(data.hasMoreRepos, true);
     });
 
     it("should redirect to GitHub for non-profile pages", async () => {

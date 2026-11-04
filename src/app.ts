@@ -13,6 +13,7 @@ import {
   getGitHubLatestCommit,
   getGitHubOrgDiscussion,
   getGitHubOrgDiscussions,
+  getGitHubOrgRepositories,
   getGitHubOwner,
   getGitHubPulls,
   getGitHubRaw,
@@ -21,6 +22,7 @@ import {
   getGitHubReleases,
   getGitHubRepo,
   getGitHubTree,
+  getGitHubUserRepositories,
   getGitHubWiki,
   getGitHubWikiPages,
   ExternalRedirectError,
@@ -127,9 +129,27 @@ export function createApp(eta: Eta) {
     return redirectToGitHub(c);
   });
 
+  // Profile tabs are a query parameter on user pages. The repositories tab
+  // is only the first, unfiltered page; anything else is left to GitHub.
   app.get("/:owner", async (c) => {
     const { owner } = c.req.param();
-    return c.render("owner.eta", await getGitHubOwner(owner));
+    const { tab, ...filters } = c.req.query();
+    if (tab === undefined || tab === "overview") {
+      return c.render("owner.eta", await getGitHubOwner(owner));
+    }
+    if (tab === "repositories" && Object.keys(filters).length === 0) {
+      return c.render("owner.eta", await getGitHubUserRepositories(owner));
+    }
+    return redirectToGitHub(c);
+  });
+
+  // An organization's repositories tab, only the first, unfiltered page.
+  app.get("/orgs/:org/repositories", async (c) => {
+    const { org } = c.req.param();
+    if (new URL(c.req.url).search) {
+      return redirectToGitHub(c);
+    }
+    return c.render("owner.eta", await getGitHubOrgRepositories(org));
   });
 
   app.get("/:owner/:repo", async (c) => {

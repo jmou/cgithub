@@ -577,9 +577,14 @@ export interface GitHubOwner {
   location: string | null;
   links: { text: string; href: string }[];
   nav: OwnerNavItem[];
+  // The profile tab shown; pinned repositories are only on the overview.
+  tab: "overview" | "repositories";
   pinned: OwnerRepo[];
-  // The repository list on organization overviews; empty for users.
+  // The repository list on organization overviews and on the repositories
+  // tab; empty for user overviews.
   repos: OwnerRepo[];
+  // Whether the repositories tab has further pages, which are only on GitHub.
+  hasMoreRepos: boolean;
 }
 
 // GitHub throttles/blocks requests without realistic browser headers.
@@ -1071,7 +1076,11 @@ export async function getGitHubDiscussions(
   repo: string,
   options: { q?: string; category?: string } = {},
 ): Promise<GitHubDiscussions> {
-  return fetchDiscussionList(`${owner}/${repo}/discussions`, () => ({ owner, name: repo }), options);
+  return fetchDiscussionList(
+    `${owner}/${repo}/discussions`,
+    () => ({ owner, name: repo }),
+    options,
+  );
 }
 
 // The list GitHub serves at /orgs/:org/discussions, which is otherwise the
@@ -1438,11 +1447,15 @@ function parseRelease(section: Element, title: string): Release {
   const authorLink = cssSelect.selectOne("a.text-bold.color-fg-muted", section);
   const author = authorLink ? textContent(authorLink).trim() || undefined : undefined;
   const authorHref = authorLink ? getAttributeValue(authorLink, "href") : undefined;
-  const authorUrl = authorHref?.startsWith("/apps/") ? `https://github.com${authorHref}` : authorHref;
+  const authorUrl = authorHref?.startsWith("/apps/")
+    ? `https://github.com${authorHref}`
+    : authorHref;
 
   // The tagged commit
   const commitLink = cssSelect.selectOne('a[data-hovercard-type="commit"]', section);
-  const commitOid = commitLink ? getAttributeValue(commitLink, "href")?.split("/").pop() : undefined;
+  const commitOid = commitLink
+    ? getAttributeValue(commitLink, "href")?.split("/").pop()
+    : undefined;
 
   // Extract body HTML (markdown content)
   const body = cssSelect.selectOne(".markdown-body", section);
@@ -1657,8 +1670,10 @@ function parseUser(document: AnyNode, login: string): GitHubOwner {
     location: selectText("li[itemprop='homeLocation']", document),
     links,
     nav: parseOwnerNav(document),
+    tab: "overview",
     pinned: parsePinnedRepos(document),
     repos: [],
+    hasMoreRepos: false,
   };
 }
 
@@ -1698,10 +1713,12 @@ function parseOrganization(document: AnyNode, owner: string): GitHubOwner {
     location: selectText(".orghead [itemprop='location']", document),
     links,
     nav: parseOwnerNav(document),
+    tab: "overview",
     pinned: parsePinnedRepos(document),
     repos: parseRepoItems(
       cssSelect.selectAll("#org-repositories [itemprop='owns']", document) as unknown as Element[],
     ),
+    hasMoreRepos: false,
   };
 }
 
@@ -1718,6 +1735,87 @@ export async function getGitHubOwner(owner: string): Promise<GitHubOwner> {
   }
   // Not a profile page (marketing pages like github.com/features, etc.).
   throw new ExternalRedirectError(`https://github.com/${owner}`);
+}
+
+export async function getGitHubUserRepositories(owner: string): Promise<GitHubOwner> {
+  let html;
+  try {
+    html = await fetchGitHubPage(`${owner}?tab=repositories`);
+  } catch (e) {
+    // GitHub sends an organization's ?tab=repositories to its overview, though
+    // it has a repositories page of its own.
+    if (
+      e instanceof InternalRedirectError &&
+      e.location.toLowerCase() === `/${owner.toLowerCase()}`
+    ) {
+      throw new InternalRedirectError(`/orgs/${owner}/repositories`);
+    }
+    throw e;
+  }
+  const document = parseDocument(html);
+
+  const login = selectText(".p-nickname.vcard-username", document);
+  if (!login) {
+    throw new ExternalRedirectError(`https://github.com/${owner}?tab=repositories`);
+  }
+
+  return {
+    ...parseUser(document, login),
+    tab: "repositories",
+    pinned: [],
+    repos: parseRepoItems(
+      cssSelect.selectAll(
+        "#user-repositories-list [itemprop='owns']",
+        document,
+      ) as unknown as Element[],
+    ),
+    hasMoreRepos: cssSelect.selectOne(".pagination a.next_page", document) !== null,
+  };
+}
+
+interface OrgReposPayload {
+  orgReposPageRoute?: {
+    pageCount: number;
+    repositories: {
+      name: string;
+      owner: string;
+      description: string | null;
+      primaryLanguage: { name: string } | null;
+      starsCount: number;
+      forksCount: number;
+    }[];
+  };
+}
+
+export async function getGitHubOrgRepositories(org: string): Promise<GitHubOwner> {
+  const html = await fetchGitHubPage(`orgs/${org}/repositories`);
+  const document = parseDocument(html);
+  const route = parseEmbeddedPayload<OrgReposPayload>(html)?.orgReposPageRoute;
+  if (!route || !cssSelect.selectOne(".orghead", document)) {
+    throw new Error("Could not find the organization's repositories");
+  }
+
+  // Counts are formatted the way the user repositories tab renders them, which
+  // leaves out a count of zero.
+  const repos: OwnerRepo[] = [];
+  for (const repo of route.repositories) {
+    repos.push({
+      owner: repo.owner,
+      name: repo.name,
+      description: repo.description || undefined,
+      language: repo.primaryLanguage?.name,
+      stars: repo.starsCount ? repo.starsCount.toLocaleString("en-US") : undefined,
+      forks: repo.forksCount ? repo.forksCount.toLocaleString("en-US") : undefined,
+    });
+  }
+
+  return {
+    ...parseOrganization(document, org),
+    tab: "repositories",
+    pinned: [],
+    repos,
+    hasMoreRepos: route.pageCount > 1,
+  };
 }
 
 // The text directly inside an element, ignoring any nested elements' text.

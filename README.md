@@ -16,20 +16,20 @@ Implemented:
 - Discussions, including organization discussions
 - Release lists and details, with the releaser, tagged commit, and latest release
 - Wiki
-- User and organization profiles
+- User and organization profiles, and their repositories tab
 
 Not implemented:
 
 - Pull request and commit details
 - Code search (GitHub requires signing in)
 - Pagination (only the first page of issues, pull requests, discussions,
-  commits, releases, branches, and tags is shown, and likewise only the replies
+  commits, releases, branches, tags, and profile repositories is shown, and likewise only the replies
   GitHub sends with a discussion, and the timeline items it sends with an issue,
   rather than what is behind a "show more" button)
 - Blame, contributors, stargazer/fork lists, network graphs, and insights
 - Actions, checks, projects, packages, and gists
-- Profile tabs other than the overview (repositories, projects, packages,
-  people, sponsoring)
+- Profile tabs other than the overview and repositories (projects, packages,
+  people, sponsoring), and filtering the repositories tab
 - Anything requiring an account: signing in, notifications, starring,
   commenting, editing, or any other write action
 - Private repositories
