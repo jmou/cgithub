@@ -42,6 +42,16 @@ function githubUrlFor(c: Context) {
   return `https://github.com${pathname}${search}`;
 }
 
+type SearchType = "issue" | "pr";
+
+// A leading is:issue or is:pr picks the list an issue search goes to. The
+// search box leaves it out, since the type dropdown already says as much.
+export function splitSearchType(q: string): { type: SearchType | null; rest: string } {
+  const match = /^is:(issue|pr)(?: |$)/.exec(q);
+  if (!match) return { type: null, rest: q };
+  return { type: match[1] as SearchType, rest: q.slice(match[0].length) };
+}
+
 export function createApp(eta: Eta) {
   const app = new Hono();
 
@@ -105,27 +115,13 @@ export function createApp(eta: Eta) {
     return c.render("home.eta");
   });
 
-  // Exclusion that immediately redirects to GitHub.
+  // Exclusions that immediately redirect to GitHub.
   app.get("/notifications", async (c) => {
     return redirectToGitHub(c);
   });
 
-  // GitHub's global search, which we only serve when it is scoped to a single
-  // repository: strip the qualifier and let that repository's search route
-  // decide what to do with the rest.
+  // Global search isn't supported, and would otherwise be scraped as a profile.
   app.get("/search", async (c) => {
-    const q = c.req.query("q") ?? "";
-    const type = c.req.query("type");
-
-    const repoQualifier = /(?:^|\s)repo:([^/\s]+)\/([^/\s]+)(?=\s|$)/.exec(q);
-    if (type && repoQualifier) {
-      const [qualifier, owner, repo] = repoQualifier;
-      const rest =
-        q.slice(0, repoQualifier.index) + q.slice(repoQualifier.index + qualifier.length);
-      const params = new URLSearchParams({ q: rest.trim(), type });
-      return c.redirect(`/${owner}/${repo}/search?${params}`);
-    }
-
     return redirectToGitHub(c);
   });
 
@@ -230,14 +226,17 @@ export function createApp(eta: Eta) {
   app.get("/:owner/:repo/issues", async (c) => {
     const { owner, repo } = c.req.param();
     const q = c.req.query("q");
-
-    // GitHub supports combined issue/PR search, apparently for legacy. We just
-    // redirect to issue-only search.
-    if (q && !/\bis:issue\b/.test(q)) {
-      return c.redirect(`/${owner}/${repo}/issues?q=${encodeURIComponent(`is:issue ${q}`)}`);
+    if (!q) {
+      return c.render("issues.eta", await getGitHubIssues(owner, repo));
     }
 
-    return c.render("issues.eta", await getGitHubIssues(owner, repo, { q }));
+    const { type, rest } = splitSearchType(q);
+    if (type === "pr") {
+      return c.redirect(`/${owner}/${repo}/pulls?q=${encodeURIComponent(q)}`);
+    }
+    // GitHub's issue list otherwise mixes in pull requests.
+    const data = await getGitHubIssues(owner, repo, { q: type ? q : `is:issue ${q}` });
+    return c.render("issues.eta", { ...data, q: rest });
   });
 
   // GitHub puts its own actions (new, assigned, ...) where a number goes, so
@@ -253,7 +252,16 @@ export function createApp(eta: Eta) {
   app.get("/:owner/:repo/pulls", async (c) => {
     const { owner, repo } = c.req.param();
     const q = c.req.query("q");
-    return c.render("pulls.eta", await getGitHubPulls(owner, repo, { q }));
+    if (!q) {
+      return c.render("pulls.eta", await getGitHubPulls(owner, repo));
+    }
+
+    const { type, rest } = splitSearchType(q);
+    if (type === "issue") {
+      return c.redirect(`/${owner}/${repo}/issues?q=${encodeURIComponent(q)}`);
+    }
+    const data = await getGitHubPulls(owner, repo, { q: type ? q : `is:pr ${q}` });
+    return c.render("pulls.eta", { ...data, q: rest });
   });
 
   // Organization discussions are kept in one of the organization's
@@ -305,10 +313,14 @@ export function createApp(eta: Eta) {
     const q = c.req.query("q") ?? "";
     const type = c.req.query("type") ?? "issues";
 
+    // Always prefix the type, even before another one, so the search box shows
+    // exactly what was submitted and the dropdown decides where it goes.
     if (type === "issues") {
-      return c.redirect(`/${owner}/${repo}/issues?q=${encodeURIComponent(q)}`);
+      const search = q ? `?q=${encodeURIComponent(`is:issue ${q}`)}` : "";
+      return c.redirect(`/${owner}/${repo}/issues${search}`);
     } else if (type === "pullrequests") {
-      return c.redirect(`/${owner}/${repo}/pulls?q=${encodeURIComponent(q)}`);
+      const search = q ? `?q=${encodeURIComponent(`is:pr ${q}`)}` : "";
+      return c.redirect(`/${owner}/${repo}/pulls${search}`);
     } else if (type === "discussions") {
       return c.redirect(`/${owner}/${repo}/discussions?discussions_q=${encodeURIComponent(q)}`);
     }

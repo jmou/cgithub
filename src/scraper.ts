@@ -796,7 +796,8 @@ function parseIssueLabel(label: IssueLabelNode): IssueLabel {
 export async function getGitHubIssues(
   owner: string,
   repo: string,
-  // We only support is:issue searches (no PR results).
+  // Start the query with is:issue: GitHub otherwise mixes in pull requests,
+  // which come back in a shape we don't parse.
   { q }: { q?: string } = {},
 ): Promise<GitHubIssues> {
   const suffix = q ? `?q=${encodeURIComponent(q)}` : "";

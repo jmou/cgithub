@@ -12,7 +12,8 @@ Implemented:
 - Repository overview
 - Directory listing and file browsing (`tree`/`blob`)
 - Commit history (but this often results in 429 Too Many Requests on Cloudflare)
-- Issue and pull request lists and search
+- Issue and pull request lists and search (the search box leaves out a leading
+  `is:issue` or `is:pr`, which the search type already says)
 - Discussions, including organization discussions
 - Release lists and details, with the releaser, tagged commit, and latest release
 - Wiki
@@ -21,7 +22,7 @@ Implemented:
 Not implemented:
 
 - Pull request and commit details
-- Code search (GitHub requires signing in)
+- Code search (GitHub requires signing in), and searching outside a repository
 - Pagination (only the first page of issues, pull requests, discussions,
   commits, releases, branches, tags, and profile repositories is shown, and likewise only the replies
   GitHub sends with a discussion, and the timeline items it sends with an issue,

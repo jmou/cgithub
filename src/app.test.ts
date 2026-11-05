@@ -2,7 +2,7 @@ import assert from "node:assert";
 import path from "node:path";
 import { describe, it, type TestContext } from "node:test";
 import { Eta } from "eta";
-import { createApp } from "./app.ts";
+import { createApp, splitSearchType } from "./app.ts";
 
 // The routes exercised here redirect without scraping, so no network is needed.
 const eta = new Eta({ views: path.join(import.meta.dirname, "..", "views") });
@@ -701,35 +701,89 @@ describe("discussions", () => {
   });
 });
 
-describe("global search", () => {
-  it("should keep the rest of the query around the qualifier", async () => {
+describe("issue and pull request search", () => {
+  it("should split a leading type off the query", () => {
+    assert.deepStrictEqual(splitSearchType("is:issue label:bug"), {
+      type: "issue",
+      rest: "label:bug",
+    });
+    assert.deepStrictEqual(splitSearchType("is:pr"), { type: "pr", rest: "" });
+    assert.deepStrictEqual(splitSearchType("is:issue is:pr foo"), {
+      type: "issue",
+      rest: "is:pr foo",
+    });
+  });
+
+  it("should only split an exact leading is:issue or is:pr", () => {
+    for (const q of [
+      "label:bug is:pr",
+      " is:issue foo",
+      "-is:pr foo",
+      "is:issues",
+      "IS:ISSUE foo",
+      "type:pr foo",
+      "is:pull-request foo",
+    ]) {
+      assert.deepStrictEqual(splitSearchType(q), { type: null, rest: q }, q);
+    }
+  });
+
+  it("should prefix the type when the search box submits", async () => {
+    for (const [type, location] of [
+      ["issues", "/cli/cli/issues?q=is%3Aissue%20label%3Abug"],
+      ["pullrequests", "/cli/cli/pulls?q=is%3Apr%20label%3Abug"],
+    ]) {
+      const res = await app.request(
+        `http://cgithub.example/cli/cli/search?q=label%3Abug&type=${type}`,
+      );
+
+      assert.strictEqual(res.status, 302);
+      assert.strictEqual(res.headers.get("location"), location);
+    }
+  });
+
+  // A box showing "is:pr foo" with Issues selected stays an issue search.
+  it("should prefix the type before another one", async () => {
+    const res = await app.request(
+      "http://cgithub.example/cli/cli/search?q=" + encodeURIComponent("is:pr foo") + "&type=issues",
+    );
+
+    assert.strictEqual(res.headers.get("location"), "/cli/cli/issues?q=is%3Aissue%20is%3Apr%20foo");
+  });
+
+  it("should drop an empty search", async () => {
+    for (const [type, location] of [
+      ["issues", "/cli/cli/issues"],
+      ["pullrequests", "/cli/cli/pulls"],
+    ]) {
+      const res = await app.request(`http://cgithub.example/cli/cli/search?q=&type=${type}`);
+
+      assert.strictEqual(res.headers.get("location"), location);
+    }
+  });
+
+  it("should send a search to the list its leading type names", async () => {
+    for (const [url, location] of [
+      ["/cli/cli/issues?q=is%3Apr%20foo", "/cli/cli/pulls?q=is%3Apr%20foo"],
+      ["/cli/cli/pulls?q=is%3Aissue%20foo", "/cli/cli/issues?q=is%3Aissue%20foo"],
+      ["/cli/cli/pulls?q=is%3Aissue%20is%3Apr", "/cli/cli/issues?q=is%3Aissue%20is%3Apr"],
+    ]) {
+      const res = await app.request(`http://cgithub.example${url}`);
+
+      assert.strictEqual(res.status, 302, url);
+      assert.strictEqual(res.headers.get("location"), location, url);
+    }
+  });
+
+  it("should redirect global search", async () => {
     const res = await app.request(
       "http://cgithub.example/search?q=" +
         encodeURIComponent("is:issue repo:actions/deploy-pages label:bug") +
         "&type=issues",
     );
 
-    assert.strictEqual(
-      res.headers.get("location"),
-      "/actions/deploy-pages/search?q=is%3Aissue+label%3Abug&type=issues",
-    );
-  });
-
-  it("should redirect searches it cannot scope to a repository", async () => {
-    for (const url of [
-      "http://cgithub.example/search?q=dms&type=code",
-      // An owner-wide search is not a single repository.
-      "http://cgithub.example/search?q=" +
-        encodeURIComponent("org:nix-community dms") +
-        "&type=code",
-      // Without a type there is no search to hand over.
-      "http://cgithub.example/search?q=" + encodeURIComponent("repo:actions/deploy-pages dms"),
-    ]) {
-      const res = await app.request(url);
-
-      assert.strictEqual(res.status, 200, url);
-      assert.match(await res.text(), /url=https:\/\/github.com\/search\?/);
-    }
+    assert.strictEqual(res.status, 200);
+    assert.match(await res.text(), /url=https:\/\/github.com\/search\?/);
   });
 });
 
