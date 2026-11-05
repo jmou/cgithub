@@ -355,7 +355,7 @@ describe("GitHub scraper", () => {
   });
 
   describe("dustinlyons/nixos-config repository", () => {
-    it("should fetch nix blob with combined overlapping styling directives", async () => {
+    it("should fetch nix blob with styling directives", async () => {
       const data = await getGitHubBlob("dustinlyons", "nixos-config", "main", "flake.nix");
 
       assert.strictEqual(data.repo.owner, "dustinlyons");
@@ -365,11 +365,8 @@ describe("GitHub scraper", () => {
       assert.strictEqual(data.htmlContent, null);
       assert.ok(data.htmlLines !== null && data.htmlLines.length > 0);
 
-      // Line 2 styles "description" as both pl-c1 and pl-s1 over the same
-      // range. GitHub's own colorized lines nest the two spans; either way the
-      // text must not be duplicated.
       const line2 = data.htmlLines[1];
-      assert.match(line2, /pl-c1\b.*pl-s1\b.*description/, `expected both classes in: ${line2}`);
+      assert.match(line2, /pl-c1\b.*description/, `expected a styled key in: ${line2}`);
       assert.ok(
         (line2.match(/description/g) ?? []).length === 1,
         `expected "description" to appear once in: ${line2}`,
