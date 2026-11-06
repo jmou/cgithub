@@ -69,11 +69,15 @@ export function createApp(eta: Eta) {
   // Redirect off-domain.
   function redirectTo(c: Context, location: string) {
     const referer = c.req.header("Referer");
-    // If we are the referer, redirect directly so we can hotlink resources
-    // (e.g., <img> in README).
-    if (referer && URL.parse(referer)?.origin === new URL(c.req.url).origin) {
+    // Redirect directly if we are the referer, so we can hotlink resources
+    // (e.g., <img> in README), or if the method is not GET. 307 keeps the
+    // method and body.
+    if (
+      (referer && URL.parse(referer)?.origin === new URL(c.req.url).origin) ||
+      c.req.method !== "GET"
+    ) {
       c.header("Referrer-Policy", "no-referrer");
-      return c.redirect(location);
+      return c.redirect(location, 307);
     }
 
     // Otherwise use a meta refresh to make ourself the initiator. This will
@@ -116,14 +120,13 @@ export function createApp(eta: Eta) {
   });
 
   // Exclusions that immediately redirect to GitHub.
-  app.get("/notifications", async (c) => {
-    return redirectToGitHub(c);
-  });
-
-  // Global search isn't supported, and would otherwise be scraped as a profile.
-  app.get("/search", async (c) => {
-    return redirectToGitHub(c);
-  });
+  app.on(
+    "GET",
+    ["/login", "/notifications", "/search", "/session", "/sessions", "/settings"],
+    async (c) => {
+      return redirectToGitHub(c);
+    },
+  );
 
   // Profile tabs are a query parameter on user pages. The repositories tab
   // is only the first, unfiltered page; anything else is left to GitHub.

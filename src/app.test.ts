@@ -812,7 +812,15 @@ describe("redirects to GitHub", () => {
       headers: { Referer: "http://cgithub.example/a/b" },
     });
 
-    assert.strictEqual(res.status, 302);
+    assert.strictEqual(res.status, 307);
+    assert.strictEqual(res.headers.get("location"), "https://github.com/a/b/c?x=1");
+    assert.strictEqual(res.headers.get("Referrer-Policy"), "no-referrer");
+  });
+
+  it("should redirect over HTTP when the method is not GET", async () => {
+    const res = await app.request("http://cgithub.example/a/b/c?x=1", { method: "POST" });
+
+    assert.strictEqual(res.status, 307);
     assert.strictEqual(res.headers.get("location"), "https://github.com/a/b/c?x=1");
     assert.strictEqual(res.headers.get("Referrer-Policy"), "no-referrer");
   });
