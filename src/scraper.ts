@@ -1481,7 +1481,10 @@ export async function getGitHubReleases(owner: string, repo: string): Promise<Gi
   const releases: Release[] = [];
 
   // Not really sure the right way to express this type.
-  const sections = cssSelect.selectAll("section", document) as unknown as Element[];
+  const sections = cssSelect.selectAll(
+    "section[data-release-anchor]",
+    document,
+  ) as unknown as Element[];
 
   for (const section of sections) {
     const h2 = cssSelect.selectOne("h2[id]", section);
