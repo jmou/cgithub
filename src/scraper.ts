@@ -40,7 +40,8 @@ interface OverviewFile {
 }
 
 interface IssuesIndexContentRoute {
-  results: {
+  // Absent when the search has no results.
+  results?: {
     issue: {
       number: number;
       title: string;
@@ -191,7 +192,8 @@ interface CommitsRefRoute {
 }
 
 interface RepoPullsDashboardContentRoute {
-  results: {
+  // Absent when the search has no results.
+  results?: {
     number: number;
     title: string;
     createdAt: string;
@@ -807,7 +809,7 @@ export async function getGitHubIssues(
     throw new Error("Could not find issuesIndexContentRoute in embedded JSON");
   }
 
-  const issues: Issue[] = route.results.map(({ issue }) => ({
+  const issues: Issue[] = (route.results ?? []).map(({ issue }) => ({
     number: issue.number,
     title: issue.title,
     state: issue.state.replace(/^REPO_ISSUE_STATE_/, ""),
@@ -1000,7 +1002,7 @@ export async function getGitHubPulls(
     throw new Error("Could not find repoPullsDashboardContentRoute in embedded JSON");
   }
 
-  const pulls: Issue[] = route.results.map((result) => ({
+  const pulls: Issue[] = (route.results ?? []).map((result) => ({
     number: result.number,
     title: result.title,
     state: result.displayState.replace(/^REPO_PULL_REQUEST_DISPLAY_STATE_/, ""),

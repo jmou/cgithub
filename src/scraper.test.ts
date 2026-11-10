@@ -169,6 +169,20 @@ describe("GitHub scraper", () => {
       assert.ok(data.issues.every((issue) => issue.state === "CLOSED"));
     });
 
+    it("should fetch an empty issue search", async () => {
+      const data = await getGitHubIssues("actions", "deploy-pages", {
+        q: "is:issue zzzcgithubnomatchzzz",
+      });
+      assert.deepStrictEqual(data.issues, []);
+    });
+
+    it("should fetch an empty pull request search", async () => {
+      const data = await getGitHubPulls("actions", "deploy-pages", {
+        q: "is:pr zzzcgithubnomatchzzz",
+      });
+      assert.deepStrictEqual(data.pulls, []);
+    });
+
     it("should fetch pull requests", async () => {
       const data = await getGitHubPulls("actions", "deploy-pages", { q: "state:closed" });
 

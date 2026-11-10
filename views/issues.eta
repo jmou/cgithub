@@ -1,19 +1,23 @@
 <% layout("/layouts/repo.eta"); it.searchType = "issues" %>
 
-<table>
-  <% for (const issue of it.issues) { %>
-    <tr>
-      <td>#<%= issue.number %></td>
-      <td><%~ include("./_issueState.eta", { state: issue.state }) %></td>
-      <td>
-        <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/issues/<%= issue.number %>">
-          <%= issue.title %>
-        </a>
-        <% for (const label of issue.labels) { %>
-          <%~ include("./_issueLabel.eta", { label }) %>
-        <% } %>
-      </td>
-      <td class="timestamp"><time title="<%= issue.createdAt %>"><%= issue.createdAt.split("T")[0] %></time></td>
-    </tr>
-  <% } %>
-</table>
+<% if (it.issues.length === 0) { %>
+  <div class="box">No results</div>
+<% } else { %>
+  <table>
+    <% for (const issue of it.issues) { %>
+      <tr>
+        <td>#<%= issue.number %></td>
+        <td><%~ include("./_issueState.eta", { state: issue.state }) %></td>
+        <td>
+          <a href="/<%= it.repo.owner %>/<%= it.repo.name %>/issues/<%= issue.number %>">
+            <%= issue.title %>
+          </a>
+          <% for (const label of issue.labels) { %>
+            <%~ include("./_issueLabel.eta", { label }) %>
+          <% } %>
+        </td>
+        <td class="timestamp"><time title="<%= issue.createdAt %>"><%= issue.createdAt.split("T")[0] %></time></td>
+      </tr>
+    <% } %>
+  </table>
+<% } %>
